@@ -1,21 +1,31 @@
-# Node.js
-# Build a general Node.js project with npm.
-# Add steps that analyze code, save build artifacts, deploy, and more:
-# https://docs.microsoft.com/azure/devops/pipelines/languages/javascript
-
 trigger:
 - main
 
 pool:
-  vmImage: ubuntu-latest
+  vmImage: 'ubuntu-latest'
 
 steps:
+
+#  Use correct Node version
 - task: NodeTool@0
   inputs:
-    versionSpec: '20.x'
+    versionSpec: '22.x'
   displayName: 'Install Node.js'
 
+#  Install dependencies
 - script: |
     npm install
-    npm run dev
-  displayName: 'npm install and build'
+  displayName: 'Install dependencies'
+
+#  Generate Prisma client
+- script: |
+    npx prisma generate
+  displayName: 'Generate Prisma Client'
+
+#  Run migrations (IMPORTANT for DB)
+- script: |
+    npx prisma migrate deploy
+  displayName: 'Run Prisma Migrations'
+
+#  DO NOT RUN dev/start here
+# Pipeline ends successfully after setup
