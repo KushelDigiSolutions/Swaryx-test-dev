@@ -13,96 +13,73 @@ datasource db {
 }
 
 
+
+model Organization {
+  id              String   @id @default(uuid())
+  name            String
+  slug            String   @unique
+
+  // marketing 🔥
+  industry        String?
+  companySize     String?
+  website         String?
+
+  country         String?
+  timezone        String?
+
+  ownerId         String   // auth user id
+  subscriptionId  String?
+
+  status          OrgStatus @default(ACTIVE)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  users           User[]
+
+  @@index([slug])
+}
+
+model User {
+  id              String   @id @default(uuid())
+  authUserId      String   @unique   // bridge to auth service
+
+  organizationId  String?
+  organization    Organization? @relation(fields: [organizationId], references: [id])
+
+  firstName       String
+  lastName        String
+  email           String
+  phone           String?
+
+  role            Role
+
+  // CRM / HR fields 🔥
+  department      String?
+  designation     String?
+  employeeId      String?
+
+  isActive        Boolean @default(true)
+  lastLoginAt     DateTime?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([organizationId])
+}
+
+enum OrgStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
 enum Role {
   SUPER_ADMIN
-  ADMIN
-  USER
-}
+  PLATFORM_ADMIN
+  SUPPORT_AGENT
 
-enum PlanType {
-  BASIC
-  STANDARD
-  PREMIUM
-  ENTERPRISE
-}
-
-enum PlanStatus {
-  ACTIVE
-  EXPIRED
-  SUSPENDED
-}
-
-// ─── Plan Table ───────────────────────────────
-model Plan {
-  id          Int        @id @default(autoincrement())
-  name        String
-  planType    PlanType
-  userLimit   Int        // Kitne users allowed hain
-  price       Float
-  durationDays Int       // Plan kitne din ka hai
-  features    Json?      // Extra features JSON mein
-  isActive    Boolean    @default(true)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-
-  admins      AdminPlan[]
-}
-
-// ─── User Table ───────────────────────────────
-model User {
-  id            Int       @id @default(autoincrement())
-  name          String
-  email         String    @unique
-  password      String
-  phone         String?
-  role          Role      @default(USER)
-  isActive      Boolean   @default(true)
-
-  // Soft delete
-  isDeleted     Boolean   @default(false)
-  deletedAt     DateTime?
-
-  // Super Admin ke apne users ka adminId null hoga
-  adminId       Int?
-  admin         User?     @relation("AdminUsers", fields: [adminId], references: [id])
-  users         User[]    @relation("AdminUsers")
-
-  // Admin ka plan
-  adminPlan     AdminPlan?
-  otp        Int?
-  otpExpiry  DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  @@index([email])
-  @@index([adminId])
-  @@index([role])
-  sessions  Session[]
-}
-
-// ─── Admin Plan (Junction) ────────────────────
-model AdminPlan {
-  id          Int        @id @default(autoincrement())
-  adminId     Int        @unique
-  admin       User       @relation(fields: [adminId], references: [id])
-  planId      Int
-  plan        Plan       @relation(fields: [planId], references: [id])
-  status      PlanStatus @default(ACTIVE)
-  startDate   DateTime   @default(now())
-  endDate     DateTime
-  currentUserCount Int   @default(0)  // Kitne users abhi hain
-
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-}
-
-model Session {
-  id           Int      @id @default(autoincrement())
-  userId       Int
-  refreshToken String   @unique
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  expiresAt    DateTime
-
-  user User @relation(fields: [userId], references: [id])
+  ORG_ADMIN
+  MANAGER
+  AGENT
 }
