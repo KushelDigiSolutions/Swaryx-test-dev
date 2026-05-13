@@ -1,20 +1,27 @@
 {
-  "name": "ai-calling-system",
+  "name": "ai-calling-system-notification-services",
   "version": "1.0.0",
   "description": "Node.js + Prisma + PostgreSQL setup",
   "main": "app.js",
   "type": "module",
   "scripts": {
-    "dev": "nodemon app.js",
+    "dev": "npm run prisma:generate && nodemon app.js",
     "start": "node app.js",
     "prisma:init": "prisma init",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:studio": "prisma studio"
+    "prisma:migrate:init": "prisma migrate dev --name init",
+    "prisma:deploy": "prisma migrate deploy",
+    "prisma:push": "prisma db push",
+    "prisma:reset": "prisma migrate reset",
+    "prisma:studio": "prisma studio",
+    "prisma:seed": "node prisma/seed.js",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.7.0",
     "@prisma/client": "^7.7.0",
+    "axios": "^1.16.0",
     "bcryptjs": "^3.0.3",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",

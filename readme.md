@@ -1,805 +1,497 @@
-# 🚀 SaaS Microservices Backend – Complete Documentation
+# 🚀 Swaryx Backend Microservices Architecture
 
-This project is a **SaaS-based microservices architecture** built using:
+A scalable Node.js microservices backend built with:
 
-* Node.js + Express
-* Prisma ORM
-* PostgreSQL (separate DB per service)
-* JWT आधारित authentication
-
----
-
-# 🧠 Architecture Overview
-
-## 🧩 Services
-
-| Service              | Purpose                     |
-| -------------------- | --------------------------- |
-| Auth Service         | Authentication (login, JWT) |
-| User Service         | Organization + Users        |
-| Subscription Service | Plans + Billing             |
-| Notification Service | Email + Logs                |
-| API Gateway          | Entry point + routing       |
+- Express.js
+- Prisma ORM
+- PostgreSQL
+- JWT Authentication
+- API Gateway
+- Notification Service
+- Subscription Service
+- User Service
 
 ---
 
-# 🔗 System Flow
+# 📦 Services
 
-```
-Client → API Gateway → Service → Database
-```
+| Service | Port | Description |
+|---|---|---|
+| API Gateway | 5000 | Main Gateway |
+| Auth Service | 5001 | Authentication & JWT |
+| User Service | 5002 | Users & Organizations |
+| Subscription Service | 5003 | Plans & Subscriptions |
+| Notification Service | 5004 | Email & Notifications |
 
 ---
 
-# 🔥 Complete Workflow
+# 📁 Project Structure
 
-## 🥇 1. User Signup Flow
-
-```
-Client
- ↓
-Auth Service → create user → returns authUserId + token
- ↓
-User Service → create organization + user profile
- ↓
-Notification Service → send welcome email
+```txt
+swaryx-backend/
+│
+├── api-gateway/
+├── auth-service/
+├── user-service/
+├── subscription-service/
+├── notification-service/
+│
+├── package.json
+└── README.md
 ```
 
 ---
 
-## 🥈 2. Login Flow
+# ⚙️ Requirements
 
-```
-Client → Auth Service → verify credentials → return JWT
-```
+Install:
 
----
-
-## 🥉 3. Create Organization
-
-```
-User (ORG_ADMIN)
- ↓
-User Service → create organization
-```
+- Node.js v20+
+- PostgreSQL
+- npm
 
 ---
 
-## 🏅 4. Subscription Flow
+# 🔥 First Time Project Setup
 
-```
-SUPER_ADMIN → create plans
-ORG_ADMIN → subscribe to plan
+## 1️⃣ Clone Repository
+
+```bash
+git clone YOUR_REPOSITORY_URL
 ```
 
 ---
 
-## 🎖️ 5. Add Users
+## 2️⃣ Go To Project
 
-```
-User Service
- ↓
-Check subscription limit (Subscription Service)
- ↓
-Create user
+```bash
+cd swaryx-backend
 ```
 
 ---
 
-# 🔐 AUTH SERVICE
+## 3️⃣ Install Root Dependencies
 
-## Base URL
-
-```
-/api/auth
+```bash
+npm install
 ```
 
 ---
 
-## 📌 1. Register
+## 4️⃣ Install All Service Dependencies
 
-### POST `/register`
-
-```json
-{
-  "email": "admin@test.com",
-  "password": "123456",
-  "role": "SUPER_ADMIN"
-}
-```
-
-### Response
-
-```json
-{
-  "userId": "auth_123",
-  "accessToken": "jwt_token",
-  "refreshToken": "refresh_token"
-}
+```bash
+npm run install:all
 ```
 
 ---
 
-## 📌 2. Login
+# 🗄️ Database Setup
 
-### POST `/login`
+Create PostgreSQL databases manually.
 
-```json
-{
-  "email": "admin@test.com",
-  "password": "123456"
-}
+Example:
+
+```txt
+auth_db
+user_db
+subscription_db
+notification_db
 ```
 
 ---
 
-## 📌 3. Get Current User
+# 🔐 Environment Variables
 
-### GET `/me`
+Each service should contain:
 
-Headers:
+```env
+DATABASE_URL="postgresql://postgres:password@localhost:5432/auth_db"
 
+JWT_SECRET=your_jwt_secret
+JWT_REFRESH_SECRET=your_refresh_secret
+
+PORT=5001
 ```
-Authorization: Bearer TOKEN
-```
+
+Update PORT according to service.
 
 ---
 
-## 📌 4. Refresh Token
+# 🔥 Prisma Commands
 
-### POST `/refresh`
+# Generate Prisma Client
 
----
+Use after:
 
-## 📌 5. Logout
+- schema changes
+- fresh install
+- git pull
 
-### POST `/logout`
-
----
-
-# 👥 USER SERVICE
-
-## Base URL
-
-```
-/api/user
-```
-
----
-
-## 📌 1. Create Organization
-
-### POST `/organization`
-
-```json
-{
-  "name": "My Company",
-  "industry": "IT",
-  "companySize": "10-50"
-}
+```bash
+npm run db:generate
 ```
 
 ---
 
-## 📌 2. Create User
+# Create New Migration
 
-### POST `/user`
+Use when schema changes.
 
-```json
-{
-  "authUserId": "auth_123",
-  "organizationId": "org_123",
-  "firstName": "Aman",
-  "lastName": "Kumar",
-  "email": "aman@test.com",
-  "role": "AGENT"
-}
+Inside service:
+
+```bash
+npm run prisma:migrate -- --name your_migration_name
+```
+
+Example:
+
+```bash
+npm run prisma:migrate -- --name add_notification_table
 ```
 
 ---
 
-## 📌 3. Get Users
+# Run All Migrations
 
-### GET `/users/:orgId`
-
----
-
-## 📌 4. Update User
-
-### PUT `/user/:id`
-
----
-
-## 📌 5. Delete User
-
-### DELETE `/user/:id`
-
----
-
-# 💰 SUBSCRIPTION SERVICE
-
-## Base URL
-
-```
-/api/subscription
+```bash
+npm run db:migrate
 ```
 
 ---
 
-## 📌 1. Create Plan (SUPER_ADMIN)
+# Production Migration
 
-### POST `/plan`
+Production should NEVER use:
 
-```json
-{
-  "name": "Starter",
-  "priceMonthly": 499,
-  "priceYearly": 4999,
-  "userLimit": 10
-}
+```bash
+prisma migrate dev
+```
+
+Use:
+
+```bash
+npm run db:deploy
 ```
 
 ---
 
-## 📌 2. Get Plans
+# Push Schema Without Migration
 
-### GET `/plans`
+Development only.
 
----
-
-## 📌 3. Subscribe
-
-### POST `/subscribe`
-
-```json
-{
-  "orgId": "org_123",
-  "planId": "plan_123"
-}
+```bash
+npm run db:push
 ```
 
 ---
 
-## 📌 4. Get Subscription
+# Reset Database
 
-### GET `/subscription/:orgId`
+⚠️ Deletes all data.
 
----
-
-## 📌 5. Check User Limit
-
-### GET `/check-limit/:orgId`
-
----
-
-# 🔔 NOTIFICATION SERVICE
-
-## Base URL
-
-```
-/api/notification
+```bash
+npm run db:reset
 ```
 
 ---
 
-## 📌 1. Send Email
+# Open Prisma Studio
 
-### POST `/send-email`
-
-```json
-{
-  "to": "user@test.com",
-  "subject": "Welcome",
-  "message": "<h1>Hello</h1>"
-}
+```bash
+npm run db:studio
 ```
 
 ---
 
-## 📌 2. Get Notifications
+# 🚀 Running Services
 
-### GET `/my`
+# Run Entire Backend
 
----
+Runs:
 
-## 📌 3. Create Notification
+- Gateway
+- Auth
+- User
+- Subscription
+- Notification
 
-### POST `/create`
-
----
-
-## 📌 4. Retry Failed
-
-### POST `/retry`
-
----
-
-# 🚀 API GATEWAY
-
-## Base URL
-
-```
-http://localhost:3000
+```bash
+npm run dev
 ```
 
 ---
 
-## Routing
+# Run Single Service
 
-| Route             | Service              |
-| ----------------- | -------------------- |
-| /api/auth         | Auth Service         |
-| /api/user         | User Service         |
+## Gateway
+
+```bash
+npm run gateway
+```
+
+---
+
+## Auth Service
+
+```bash
+npm run auth
+```
+
+---
+
+## User Service
+
+```bash
+npm run user
+```
+
+---
+
+## Subscription Service
+
+```bash
+npm run subscription
+```
+
+---
+
+## Notification Service
+
+```bash
+npm run notification
+```
+
+---
+
+# 🧪 Local Development Flow
+
+# Step 1
+
+Start PostgreSQL.
+
+---
+
+# Step 2
+
+Run:
+
+```bash
+npm run install:all
+```
+
+---
+
+# Step 3
+
+Generate Prisma clients.
+
+```bash
+npm run db:generate
+```
+
+---
+
+# Step 4
+
+Run migrations.
+
+```bash
+npm run db:migrate
+```
+
+---
+
+# Step 5
+
+Start all services.
+
+```bash
+npm run dev
+```
+
+---
+
+# 🌐 API Gateway
+
+Main Entry Point:
+
+```txt
+http://localhost:5000
+```
+
+---
+
+# 🔀 Gateway Routes
+
+| Route | Target |
+|---|---|
+| /api/auth | Auth Service |
+| /api/user | User Service |
 | /api/subscription | Subscription Service |
 | /api/notification | Notification Service |
 
 ---
 
-# 🔐 JWT Structure
+# 🔥 Example APIs
 
-```json
-{
-  "userId": "auth_123",
-  "role": "ORG_ADMIN"
-}
+## Register User
+
+```http
+POST http://localhost:5000/api/auth/register
 ```
 
 ---
 
-# 🗄️ DATABASE DESIGN
+## Login
 
-## Separate DB per service
-
-| Service      | DB              |
-| ------------ | --------------- |
-| Auth         | auth_db         |
-| User         | user_db         |
-| Subscription | subscription_db |
-| Notification | notification_db |
-
----
-
-# 🔗 Inter-Service Communication
-
-* REST APIs (current)
-* Future: Event आधारित (Kafka / RabbitMQ)
-
----
-
-# ⚠️ Important Rules
-
-❌ No DB sharing
-❌ No cross-service joins
-✅ Use API communication
-
----
-
-# 🧪 Testing Flow (Step-by-Step)
-
-1. Register user
-2. Login
-3. Create organization
-4. Create plan
-5. Subscribe
-6. Add users
-
----
-
-# 🔥 Production Improvements
-
-* Rate limiting
-* Logging system
-* Email templates
-* Payment gateway (Stripe)
-* Queue system
-
----
-
-# 💥 Final Summary
-
-This system provides:
-
-✅ Multi-tenant SaaS architecture
-✅ Scalable microservices
-✅ Role-based access
-✅ Subscription-based control
-✅ Notification system
-
----
-
-# 🚀 Next Steps
-
-* Docker setup
-* CI/CD pipeline
-* Frontend integration
-* Event-driven architecture
-
----
-
-👉 You now have a **complete SaaS backend architecture ready for production scaling** 🔥
-
-
-
-# 📖 SaaS System Story Flow (Real World Scenario)
-
-Socho tumne ek SaaS product banaya hai — aur ab ek company usko use karne wali hai…
-
----
-
-## 🎬 Scene 1: Platform Owner (SUPER ADMIN)
-
-Ek banda hai — **tum (platform owner)**
-
-👉 Tum sabse pehle system me aate ho
-
-* Tum Auth Service pe jaake register karte ho
-* Tumhara role hota hai: `SUPER_ADMIN`
-
-👉 Ab tumhare paas full control hai system ka
-
----
-
-## 🎬 Scene 2: Plans Banana (Business Setup)
-
-Tum sochte ho:
-
-> “Agar log mera SaaS use karenge, toh unhe plans dene padenge”
-
-👉 Tum Subscription Service me jaake plan banate ho:
-
-* Starter Plan (5 users)
-* Pro Plan (20 users)
-
-👉 Ab system ready hai customers ke liye 💰
-
----
-
-## 🎬 Scene 3: Customer Entry (ORG ADMIN Signup)
-
-Ab ek company aati hai — maan lo:
-
-👉 **“ABC Pvt Ltd”**
-
-Unka owner aata hai:
-
-* Wo Auth Service me register karta hai
-* Role: `ORG_ADMIN`
-
-👉 Ab wo system me login kar leta hai
-
----
-
-## 🎬 Scene 4: Company Setup (Organization Create)
-
-Login ke baad wo bolta hai:
-
-> “Mujhe apni company setup karni hai”
-
-👉 Wo User Service me jaata hai
-
-* Organization create karta hai
-* “ABC Pvt Ltd”
-
-👉 System ek `orgId` generate karta hai
-
----
-
-## 🎬 Scene 5: Owner Profile Create
-
-👉 Ab uska Auth user already bana hua hai
-👉 Ab wo apni profile create karta hai User Service me
-
-* authUserId link hota hai
-* organizationId attach hota hai
-
-👉 Ab wo officially company ka admin ban gaya ✅
-
----
-
-## 🎬 Scene 6: Plan Purchase (Subscription Start)
-
-Ab wo sochta hai:
-
-> “Mujhe team add karni hai”
-
-👉 Wo Subscription Service me jaake:
-
-* Starter Plan purchase karta hai
-
-👉 Ab usko milta hai:
-
-* max 5 users allowed
-
----
-
-## 🎬 Scene 7: Team Build Karna (Users Add)
-
-Ab wo apni team banana start karta hai:
-
-### 👨‍💼 Step 1:
-
-Ek employee add karta hai
-
-* Pehle Auth Service me user create hota hai
-* Fir User Service me profile create hoti hai
-
-👉 System check karta hai:
-
-* current users < plan limit ✔️
-
----
-
-### 👨‍💼 Step 2:
-
-Wo aur users add karta hai…
-
-👉 Jab 5 users ho jaate hain:
-
-System bolta hai:
-
-> ❌ “User limit reached”
-
----
-
-## 🎬 Scene 8: Upgrade Moment 🚀
-
-Ab company grow karti hai
-
-👉 Wo plan upgrade karta hai:
-
-* Starter → Pro
-
-👉 Ab wo 20 users add kar sakta hai
-
----
-
-## 🎬 Scene 9: Notifications 🔔
-
-Jab bhi:
-
-* User add hota hai
-* Plan purchase hota hai
-
-👉 Notification Service email bhejti hai:
-
-> “Welcome to ABC Pvt Ltd”
-
----
-
-## 🎬 Final Scene: System Live 🚀
-
-Ab system fully chal raha hai:
-
-* Auth → login handle kar raha hai
-* User → company + users manage kar raha hai
-* Subscription → limits control kar raha hai
-* Notification → communication handle kar raha hai
-
----
-
-# 🧠 Whole Story in One Line
-
-👉
-
-```text
-Platform create → Plans create → Company signup → Org create → Plan purchase → Users add → System run
+```http
+POST http://localhost:5000/api/auth/login
 ```
 
 ---
 
-# 💥 Important Learning
+## Create Organization
 
-👉 Is story se yaad rakhna:
-
-* Auth bina kuch nahi
-* Org bina user nahi
-* Plan bina scaling nahi
-* Subscription bina control nahi
-
----
-
-# 🚀 Tum kya bana chuke ho
-
-👉 Ye koi normal backend nahi hai
-👉 Tumne ek **complete SaaS engine** bana diya hai 🔥
-
----
-
-Agar chaho next main:
-
-👉 is story ko **diagram + flowchart** me convert kar deta hoon
-👉 ya ek **single signup API (auto flow)** bana deta hoon
-
-Bas bolo 😄
-
-
-
-# 📖 SaaS System Story (Step-by-Step Real Flow)
-
-Imagine you’ve built your own SaaS product…
-Now let’s walk through **how it actually works in real life** 👇
-
----
-
-## 🎬 Scene 1: You – The Platform Owner (SUPER ADMIN)
-
-You are the owner of the platform.
-
-👉 First, you enter your system:
-
-* You register using the Auth Service
-* Your role is: `SUPER_ADMIN`
-
-Now you have **full control over the entire platform** 🔐
-
----
-
-## 🎬 Scene 2: Creating Plans (Business Setup)
-
-You think:
-
-> “If companies are going to use my SaaS, I need pricing plans”
-
-👉 So you go to the Subscription Service and create:
-
-* Starter Plan → 5 users
-* Pro Plan → 20 users
-
-Now your system is **ready to sell** 💰
-
----
-
-## 🎬 Scene 3: A Customer Arrives (ORG ADMIN Signup)
-
-A company joins your platform:
-
-👉 Let’s say: **ABC Pvt Ltd**
-
-The company owner:
-
-* Registers via Auth Service
-* Role: `ORG_ADMIN`
-
-Now they can log in to your system.
-
----
-
-## 🎬 Scene 4: Setting Up Their Company (Organization)
-
-After login, they think:
-
-> “I need to set up my company inside this system”
-
-👉 They go to User Service and:
-
-* Create an organization → “ABC Pvt Ltd”
-
-👉 System generates an `orgId`
-
----
-
-## 🎬 Scene 5: Creating Their Profile
-
-Now:
-
-* Their Auth account already exists
-* They create their **user profile** in User Service
-
-👉 This links:
-
-* `authUserId` → from Auth Service
-* `organizationId` → from User Service
-
-Now they officially become the **admin of their company** ✅
-
----
-
-## 🎬 Scene 6: Buying a Plan (Subscription)
-
-Now they want to add their team.
-
-👉 They go to Subscription Service:
-
-* Purchase Starter Plan
-
-👉 Now system knows:
-
-* This company can have **max 5 users**
-
----
-
-## 🎬 Scene 7: Building Their Team (Adding Users)
-
-The company starts adding employees 👇
-
----
-
-### 👨‍💼 Step 1: Add First User
-
-* First → create user in Auth Service
-* Then → create profile in User Service
-
-👉 System checks:
-
-* Current users < limit ✔️ → Allowed
-
----
-
-### 👨‍💼 Step 2: Keep Adding Users
-
-They keep adding users…
-
-👉 When they reach 5 users:
-
-System stops them:
-
-> ❌ “User limit reached”
-
----
-
-## 🎬 Scene 8: Upgrade Plan 🚀
-
-Company grows 📈
-
-👉 They upgrade:
-
-* Starter → Pro Plan
-
-👉 Now they can add up to **20 users**
-
----
-
-## 🎬 Scene 9: Notifications 🔔
-
-Whenever something happens:
-
-* New user added
-* Subscription created
-
-👉 Notification Service sends emails:
-
-> “Welcome to ABC Pvt Ltd”
-
----
-
-## 🎬 Final Scene: System Fully Running 🚀
-
-Now everything works together:
-
-* Auth Service → handles login & security
-* User Service → manages company & users
-* Subscription Service → controls plans & limits
-* Notification Service → sends communication
-
----
-
-# 🧠 Entire System in One Line
-
-```text
-Platform setup → Plans created → Company signup → Organization created → Subscription purchased → Users added → System running
+```http
+POST http://localhost:5000/api/user/organization
 ```
 
 ---
 
-# 💥 Key Takeaways
+## Create Subscription
 
-* No Auth → nothing works
-* No Organization → users cannot exist
-* No Subscription → no scaling control
-* No Limits → SaaS breaks
-
----
-
-# 🚀 What You Have Built
-
-👉 This is not just a backend
-👉 You’ve built a **complete SaaS engine** 🔥
+```http
+POST http://localhost:5000/api/subscription/subscribe
+```
 
 ---
 
-If you want next:
+## Send Notification
 
-* I can convert this into a **diagram / architecture chart**
-* Or build a **single signup API (auto flow: auth + org + user)**
+```http
+POST http://localhost:5000/api/notification/send-email
+```
 
-Just tell me 👍
+---
+
+# 🔔 Notification Flow
+
+```txt
+User Registers
+      ↓
+Auth Service
+      ↓
+Notification Service
+      ↓
+Welcome Email Sent
+      ↓
+Notification Saved
+```
+
+---
+
+# 🔐 Authentication
+
+Protected APIs require:
+
+```http
+Authorization: Bearer YOUR_ACCESS_TOKEN
+```
+
+---
+
+# 🚀 Production Deployment
+
+# Install Dependencies
+
+```bash
+npm run install:all
+```
+
+---
+
+# Generate Prisma Client
+
+```bash
+npm run db:generate
+```
+
+---
+
+# Run Production Migrations
+
+```bash
+npm run db:deploy
+```
+
+---
+
+# Start Production Server
+
+```bash
+npm start
+```
+
+---
+
+# ⚠️ Important Best Practices
+
+# Development
+
+Use:
+
+```bash
+prisma migrate dev
+```
+
+---
+
+# Production
+
+Use:
+
+```bash
+prisma migrate deploy
+```
+
+---
+
+# Never Use In Production
+
+```bash
+prisma migrate reset
+```
+
+---
+
+# After Git Pull
+
+Always run:
+
+```bash
+npm run install:all
+npm run db:generate
+```
+
+---
+
+# 🧠 Recommended Future Improvements
+
+- Docker
+- Kubernetes
+- Redis
+- RabbitMQ
+- BullMQ
+- WebSockets
+- CI/CD Pipeline
+- Swagger Documentation
+- Rate Limiting
+- Monitoring
+
+---
+
+# 👨‍💻 Author
+
+Swaryx Backend System
+Built with Node.js + Prisma + PostgreSQL

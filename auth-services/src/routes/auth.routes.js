@@ -25,6 +25,9 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 
 import prisma from "../../utils/prisma.js";
+import { sendNotification } from "../../../utils/sendNotification.js";
+import axios from "axios";
+
 
 const router = express.Router();
 
@@ -183,6 +186,47 @@ router.post("/register", async (req, res) => {
       where: { id: user.id },
       data: { refreshToken },
     });
+
+    try {
+      console.log("Sending notification...");
+    
+      const notificationResponse = await sendNotification({
+        token: accessToken,
+    
+        // internal notification
+        userId: user.id,
+    
+        title: "Account Created",
+        message: "Welcome to Swaryx AI Platform",
+    
+        // email
+        sendEmail: true,
+    
+        to: email,
+    
+        subject: "Welcome to Swaryx AI",
+    
+        html: `
+          <h1>Welcome ${email}</h1>
+    
+          <p>
+            Your account has been created successfully.
+          </p>
+    
+          <p>
+            Role: ${role || "ORG_ADMIN"}
+          </p>
+        `,
+      });
+    
+      console.log("Notification Response:", notificationResponse);
+    
+    } catch (notificationError) {
+      console.error(
+        "Notification Failed:",
+        notificationError?.response?.data || notificationError.message
+      );
+    }
 
     ////////////////////////////////////////////////////////
     // Send response

@@ -1,20 +1,70 @@
 import express from "express";
 import dotenv from "dotenv";
+
 import subscriptionRoutes from "./src/routes/subscription.routes.js";
 
 dotenv.config();
 
 const app = express();
 
+///////////////////////////////////////////////////////////
+// MIDDLEWARE
+///////////////////////////////////////////////////////////
+
 app.use(express.json());
 
-// subscription-service/app.js mein yeh hona chahiye
-app.use("/", subscriptionRoutes);
+///////////////////////////////////////////////////////////
+// REQUEST LOGGER
+///////////////////////////////////////////////////////////
 
-app.get("/", (req, res) => {
-  res.send("Subscription Service Running...");
+app.use((req, _res, next) => {
+  console.log(`[SUBSCRIPTION SERVICE] ${req.method} ${req.url}`);
+  next();
 });
 
-app.listen(process.env.PORT, () => {
-  console.log(`Subscription Service running on ${process.env.PORT}`);
+///////////////////////////////////////////////////////////
+// HEALTH CHECK
+///////////////////////////////////////////////////////////
+
+app.get("/health", (_req, res) => {
+  return res.status(200).json({
+    success: true,
+    service: "Subscription Service",
+    status: "Running",
+  });
+});
+
+///////////////////////////////////////////////////////////
+// ROUTES
+///////////////////////////////////////////////////////////
+
+app.use("/api/subscription", subscriptionRoutes);
+
+///////////////////////////////////////////////////////////
+// DEFAULT ROUTE
+///////////////////////////////////////////////////////////
+
+app.get("/", (_req, res) => {
+  return res.send("Subscription Service Running...");
+});
+
+///////////////////////////////////////////////////////////
+// 404 ROUTE
+///////////////////////////////////////////////////////////
+
+app.use((req, res) => {
+  return res.status(404).json({
+    success: false,
+    message: `Cannot ${req.method} ${req.originalUrl}`,
+  });
+});
+
+///////////////////////////////////////////////////////////
+// SERVER
+///////////////////////////////////////////////////////////
+
+const PORT = process.env.PORT || 5003;
+
+app.listen(PORT, () => {
+  console.log(`Subscription Service running on ${PORT}`);
 });

@@ -2,7 +2,7 @@
 CREATE TYPE "OrgStatus" AS ENUM ('ACTIVE', 'SUSPENDED', 'DELETED');
 
 -- CreateEnum
-CREATE TYPE "Role" AS ENUM ('SUPER_ADMIN', 'ORG_ADMIN', 'MANAGER', 'AGENT');
+CREATE TYPE "Role" AS ENUM ('SUPER_ADMIN', 'PLATFORM_ADMIN', 'SUPPORT_AGENT', 'ORG_ADMIN', 'MANAGER', 'AGENT');
 
 -- CreateTable
 CREATE TABLE "Organization" (
@@ -27,7 +27,7 @@ CREATE TABLE "Organization" (
 CREATE TABLE "User" (
     "id" TEXT NOT NULL,
     "authUserId" TEXT NOT NULL,
-    "organizationId" TEXT NOT NULL,
+    "organizationId" TEXT,
     "firstName" TEXT NOT NULL,
     "lastName" TEXT NOT NULL,
     "email" TEXT NOT NULL,
@@ -57,4 +57,4 @@ CREATE UNIQUE INDEX "User_authUserId_key" ON "User"("authUserId");
 CREATE INDEX "User_organizationId_idx" ON "User"("organizationId");
 
 -- AddForeignKey
-ALTER TABLE "User" ADD CONSTRAINT "User_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "User" ADD CONSTRAINT "User_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE SET NULL ON UPDATE CASCADE;

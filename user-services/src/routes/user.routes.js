@@ -56,6 +56,9 @@ router.post("/organization", verifyToken, async (req, res) => {
 
 router.post("/user", verifyToken, async (req, res) => {
   try {
+
+    console.log("HEADERS =>", req.headers);
+    console.log("BODY =>", req.body);
     const {
       authUserId,
       organizationId,

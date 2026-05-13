@@ -1,19 +1,70 @@
 import express from "express";
 import dotenv from "dotenv";
+
 import notificationRoutes from "./src/routes/notification.routes.js";
 
 dotenv.config();
 
 const app = express();
 
+///////////////////////////////////////////////////////////
+// MIDDLEWARE
+///////////////////////////////////////////////////////////
+
 app.use(express.json());
+
+///////////////////////////////////////////////////////////
+// REQUEST LOGGER
+///////////////////////////////////////////////////////////
+
+app.use((req, _res, next) => {
+  console.log(`[NOTIFICATION SERVICE] ${req.method} ${req.url}`);
+  next();
+});
+
+///////////////////////////////////////////////////////////
+// HEALTH CHECK
+///////////////////////////////////////////////////////////
+
+app.get("/health", (_req, res) => {
+  return res.status(200).json({
+    success: true,
+    service: "Notification Service",
+    status: "Running",
+  });
+});
+
+///////////////////////////////////////////////////////////
+// ROUTES
+///////////////////////////////////////////////////////////
 
 app.use("/api/notification", notificationRoutes);
 
-app.get("/", (req, res) => {
-  res.send("Notification Service Running...");
+///////////////////////////////////////////////////////////
+// DEFAULT ROUTE
+///////////////////////////////////////////////////////////
+
+app.get("/", (_req, res) => {
+  return res.send("Notification Service Running...");
 });
 
-app.listen(process.env.PORT, () => {
-  console.log(`Notification Service running on ${process.env.PORT}`);
+///////////////////////////////////////////////////////////
+// 404 ROUTE
+///////////////////////////////////////////////////////////
+
+app.use((req, res) => {
+  return res.status(404).json({
+    success: false,
+    message: `Cannot ${req.method} ${req.originalUrl}`,
+  });
+});
+
+///////////////////////////////////////////////////////////
+// SERVER
+///////////////////////////////////////////////////////////
+
+const PORT = process.env.PORT || 5004;
+
+app.listen(PORT, () => {
+  console.log(`Notification Service running on ${PORT}`);
 });

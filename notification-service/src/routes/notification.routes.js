@@ -2,6 +2,7 @@ import express from "express";
 import prisma from "../../utils/prisma.js";
 import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
+import { sendEmail } from "../../utils/mail.js";
 
 const router = express.Router();
 
@@ -27,14 +28,6 @@ const verifyToken = (req, res, next) => {
 // 📧 MAIL CONFIG (SMTP)
 //////////////////////////////////////
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: process.env.SMTP_PORT,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
 
 //////////////////////////////////////
 // 📧 SEND EMAIL
@@ -43,15 +36,10 @@ const transporter = nodemailer.createTransport({
 router.post("/send-email", verifyToken, async (req, res) => {
   try {
     const { to, subject, message } = req.body;
+    console.log("Received email request:", { to, subject });
+    console.log("Runnig form SemdEmail route");
 
-    const mailOptions = {
-      from: process.env.SMTP_USER,
-      to,
-      subject,
-      html: message,
-    };
-
-    await transporter.sendMail(mailOptions);
+    await sendEmail(to, subject, message);
 
     // save log
     await prisma.notification.create({
