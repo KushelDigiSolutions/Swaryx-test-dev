@@ -1,5 +1,5 @@
 {
-  "name": "ai-calling-system-user-services",
+  "name": "ai-calling-system-auth-services",
   "version": "1.0.0",
   "description": "Node.js + Prisma + PostgreSQL setup",
   "main": "app.js",

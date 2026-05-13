@@ -1,7 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 
-import userRoutes from "./src/routes/user.routes.js";
+import subscriptionRoutes from "./src/routes/subscription.routes.js";
 
 dotenv.config();
 
@@ -18,7 +18,7 @@ app.use(express.json());
 ///////////////////////////////////////////////////////////
 
 app.use((req, _res, next) => {
-  console.log(`[USER SERVICE] ${req.method} ${req.url}`);
+  console.log(`[SUBSCRIPTION SERVICE] ${req.method} ${req.url}`);
   next();
 });
 
@@ -29,7 +29,7 @@ app.use((req, _res, next) => {
 app.get("/health", (_req, res) => {
   return res.status(200).json({
     success: true,
-    service: "User Service",
+    service: "Subscription Service",
     status: "Running",
   });
 });
@@ -38,14 +38,14 @@ app.get("/health", (_req, res) => {
 // ROUTES
 ///////////////////////////////////////////////////////////
 
-app.use("/api/user", userRoutes);
+app.use("/api/subscription", subscriptionRoutes);
 
 ///////////////////////////////////////////////////////////
 // DEFAULT ROUTE
 ///////////////////////////////////////////////////////////
 
 app.get("/", (_req, res) => {
-  return res.send("User Service Running...");
+  return res.send("Subscription Service Running...");
 });
 
 ///////////////////////////////////////////////////////////
@@ -63,8 +63,8 @@ app.use((req, res) => {
 // SERVER
 ///////////////////////////////////////////////////////////
 
-const PORT = process.env.PORT || 5002;
+const PORT = process.env.PORT || 5003;
 
 app.listen(PORT, () => {
-  console.log(`User Service running on ${PORT}`);
+  console.log(`Subscription Service running on ${PORT}`);
 });
