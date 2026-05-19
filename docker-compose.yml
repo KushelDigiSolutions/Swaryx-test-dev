@@ -23,20 +23,6 @@ services:
       - "5001:5001"
     env_file:
       - .env
-    volumes:
-      - ./utils:/utils
-    depends_on:
-      - auth-db
-
-  auth-db:
-    image: postgres:16
-    container_name: auth-db
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: Raju@7978
-      POSTGRES_DB: auth_db
-    volumes:
-      - auth_data:/var/lib/postgresql/data
 
   user-service:
     build:
@@ -47,18 +33,7 @@ services:
     env_file:
       - .env
     depends_on:
-      - user-db
       - auth-service
-
-  user-db:
-    image: postgres:16
-    container_name: user-db
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: Raju@7978
-      POSTGRES_DB: user_db
-    volumes:
-      - user_data:/var/lib/postgresql/data
 
   subscription-service:
     build:
@@ -69,18 +44,7 @@ services:
     env_file:
       - .env
     depends_on:
-      - subscription-db
       - auth-service
-
-  subscription-db:
-    image: postgres:16
-    container_name: subscription-db
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: Raju@7978
-      POSTGRES_DB: subscription_db
-    volumes:
-      - subscription_data:/var/lib/postgresql/data
 
   notification-service:
     build:
@@ -91,21 +55,4 @@ services:
     env_file:
       - .env
     depends_on:
-      - notification-db
       - auth-service
-
-  notification-db:
-    image: postgres:16
-    container_name: notification-db
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: Raju@7978
-      POSTGRES_DB: notification_db
-    volumes:
-      - notification_data:/var/lib/postgresql/data
-
-volumes:
-  auth_data:
-  user_data:
-  subscription_data:
-  notification_data:

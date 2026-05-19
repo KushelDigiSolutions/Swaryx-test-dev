@@ -1,22 +1,47 @@
+# ---------- Build Stage ----------
+FROM node:22-alpine AS builder
+
+WORKDIR /app
+
+# Dependency layer
+COPY package*.json ./
+COPY prisma ./prisma/
+COPY prisma.config.ts ./
+
+RUN npm ci
+
+# Copy source
+COPY src ./src
+COPY utils ./utils
+COPY app.js ./
+
+# Generate Prisma client
+RUN npx prisma generate
+
+
+# ---------- Production Stage ----------
 FROM node:22-alpine
 
 WORKDIR /app
 
-# Copy dependency files first
+ENV NODE_ENV=production
+
+# Package files
 COPY package*.json ./
-COPY prisma ./prisma/
 
-# Install dependencies
-RUN npm ci
+# Production dependencies only
+RUN npm ci --omit=dev
 
-# Copy only application code
-COPY src ./src
-COPY utils ./utils
-COPY app.js ./
-COPY prisma.config.ts ./
+# Runtime files only
+COPY --from=builder /app/src ./src
+COPY --from=builder /app/utils ./utils
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/app.js ./
+COPY --from=builder /app/prisma.config.ts ./
 
-# Generate Prisma client
-RUN npx prisma generate
+# Prisma runtime
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
 EXPOSE 5002
 
