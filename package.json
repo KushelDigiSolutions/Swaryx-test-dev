@@ -1,0 +1,46 @@
+{
+  "name": "swaryx-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "install:all": "npm install && cd auth-services && npm install && cd ../user-services && npm install && cd ../subscription-service && npm install && cd ../notification-service && npm install",
+    "dev": "concurrently -n gateway,auth,user,subscription,notification -c blue,green,yellow,magenta,cyan \"npm run dev:gateway\" \"npm run dev:auth\" \"npm run dev:user\" \"npm run dev:subscription\" \"npm run dev:notification\"",
+    "start": "concurrently -n gateway,auth,user,subscription,notification -c blue,green,yellow,magenta,cyan \"npm run start:gateway\" \"npm run start:auth\" \"npm run start:user\" \"npm run start:subscription\" \"npm run start:notification\"",
+    "dev:gateway": "nodemon app.js",
+    "dev:auth": "cd auth-services && npm run dev",
+    "dev:user": "cd user-services && npm run dev",
+    "dev:subscription": "cd subscription-service && npm run dev",
+    "dev:notification": "cd notification-service && npm run dev",
+    "start:gateway": "node app.js",
+    "start:auth": "cd auth-services && npm start",
+    "start:user": "cd user-services && npm start",
+    "start:subscription": "cd subscription-service && npm start",
+    "start:notification": "cd notification-service && npm start",
+    "gateway": "npm run dev:gateway",
+    "auth": "npm run dev:auth",
+    "user": "npm run dev:user",
+    "subscription": "npm run dev:subscription",
+    "notification": "npm run dev:notification",
+    "db:generate": "cd auth-services && npm run prisma:generate && cd ../user-services && npm run prisma:generate && cd ../subscription-service && npm run prisma:generate && cd ../notification-service && npm run prisma:generate",
+    "db:migrate": "cd auth-services && npm run prisma:migrate && cd ../user-services && npm run prisma:migrate && cd ../subscription-service && npm run prisma:migrate && cd ../notification-service && npm run prisma:migrate",
+    "db:push": "cd auth-services && npm run prisma:push && cd ../user-services && npm run prisma:push && cd ../subscription-service && npm run prisma:push && cd ../notification-service && npm run prisma:push",
+    "db:deploy": "cd auth-services && npm run prisma:deploy && cd ../user-services && npm run prisma:deploy && cd ../subscription-service && npm run prisma:deploy && cd ../notification-service && npm run prisma:deploy",
+    "db:reset": "cd auth-services && npm run prisma:reset && cd ../user-services && npm run prisma:reset && cd ../subscription-service && npm run prisma:reset && cd ../notification-service && npm run prisma:reset",
+    "db:studio": "cd auth-services && npm run prisma:studio"
+  },
+  "dependencies": {
+    "axios": "^1.16.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.5.1",
+    "http-proxy-middleware": "^3.0.5",
+    "jsonwebtoken": "^9.0.3",
+    "morgan": "^1.10.1"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "nodemon": "^3.1.14"
+  }
+}

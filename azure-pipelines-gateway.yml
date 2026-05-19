@@ -1,0 +1,55 @@
+trigger:
+- main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  NODE_VERSION: '22.x'
+  IMAGE_NAME: 'gateway'
+
+steps:
+
+# Install Node
+- task: NodeTool@0
+  inputs:
+    versionSpec: $(NODE_VERSION)
+  displayName: 'Install Node.js'
+
+# Install dependencies
+- script: |
+    npm ci
+  displayName: 'Install dependencies'
+
+# SonarQube Scan
+- task: SonarQubePrepare@7
+  inputs:
+    SonarQube: 'SonarQube'
+    scannerMode: 'CLI'
+    configMode: 'manual'
+    cliProjectKey: 'gateway'
+    cliProjectName: 'gateway'
+
+- task: SonarQubeAnalyze@7
+
+- task: SonarQubePublish@7
+  inputs:
+    pollingTimeoutSec: '300'
+
+# Docker build + push to ACR
+- task: Docker@2
+  inputs:
+    containerRegistry: 'ACR-ServiceConnection'
+    repository: 'gateway'
+    command: 'buildAndPush'
+    buildContext: '.'
+    Dockerfile: 'Dockerfile'
+    tags: '$(Build.BuildId)'
+
+# Deploy to AKS
+- task: KubernetesManifest@1
+  inputs:
+    action: deploy
+    kubernetesServiceConnection: 'AKS-ServiceConnection'
+    manifests: |
+      k8s/gateway-deployment.yaml
