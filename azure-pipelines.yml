@@ -1,0 +1,44 @@
+trigger:
+- main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  NODE_VERSION: '22.x'
+
+steps:
+
+#  Install Node.js
+- task: NodeTool@0
+  inputs:
+    versionSpec: $(NODE_VERSION)
+  displayName: 'Install Node.js'
+
+#  Install dependencies
+- script: |
+    npm install
+  displayName: 'Install dependencies'
+
+#  Generate Prisma Client
+- script: |
+    npx prisma generate
+  displayName: 'Generate Prisma Client'
+
+#  Run Prisma Migrations (IMPORTANT)
+- script: |
+    npx prisma migrate deploy
+  displayName: 'Run Prisma Migrations'
+  env:
+    DATABASE_URL: $(DATABASE_URL)
+
+#  (Optional) Run Prisma Seed
+- script: |
+    npx prisma db seed
+  displayName: 'Run Prisma Seed'
+  env:
+    DATABASE_URL: $(DATABASE_URL)
+
+#  Finish
+- script: echo "Pipeline completed successfully "
+  displayName: 'Done'
