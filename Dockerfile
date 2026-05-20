@@ -12,6 +12,7 @@ RUN npm ci
 COPY app.js ./
 COPY utils ./utils
 
+
 # ---------- Production Stage ----------
 FROM node:22-alpine
 
@@ -21,10 +22,10 @@ ENV NODE_ENV=production
 
 COPY package*.json ./
 
-# Install production deps only
-RUN npm ci --omit=dev
+# Install ALL deps because start uses concurrently
+RUN npm ci
 
-# Copy runtime files only
+# Copy runtime files
 COPY --from=builder /app/app.js ./
 COPY --from=builder /app/utils ./utils
 

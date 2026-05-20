@@ -3,19 +3,16 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Dependency layer
 COPY package*.json ./
 COPY prisma ./prisma/
 COPY prisma.config.ts ./
 
 RUN npm ci
 
-# Copy source
 COPY src ./src
 COPY utils ./utils
 COPY app.js ./
 
-# Generate Prisma client
 RUN npx prisma generate
 
 
@@ -26,20 +23,17 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# package files
+# IMPORTANT: copy prisma before npm ci
 COPY package*.json ./
+COPY prisma ./prisma/
+COPY prisma.config.ts ./
 
-# Production dependencies only
 RUN npm ci --omit=dev
 
-# Copy runtime files only
 COPY --from=builder /app/src ./src
 COPY --from=builder /app/utils ./utils
-COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/app.js ./
-COPY --from=builder /app/prisma.config.ts ./
 
-# Prisma runtime artifacts
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
