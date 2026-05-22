@@ -22,6 +22,81 @@ const verifyToken = (req, res, next) => {
   }
 };
 
+///////////////////////////////////////////////////////////
+// 👤 GET MY PROFILE
+///////////////////////////////////////////////////////////
+
+router.get("/profile", verifyToken, async (req, res) => {
+  try {
+    let user = await prisma.user.findUnique({
+      where: { authUserId: req.user.userId },
+      include: {
+        organization: {
+          select: { id: true, name: true, slug: true, industry: true, status: true },
+        },
+      },
+    });
+
+    // Auto-create karo agar record nahi mila (purane users ke liye)
+    if (!user) {
+      console.log(`[USER SERVICE] Auto-creating profile for authUserId: ${req.user.userId}`);
+      user = await prisma.user.create({
+        data: {
+          authUserId: req.user.userId,
+          email:      req.user.email || "",
+          firstName:  req.user.email ? req.user.email.split("@")[0] : "",
+          lastName:   "",
+          role:       req.user.role || "AGENT",
+        },
+        include: {
+          organization: {
+            select: { id: true, name: true, slug: true, industry: true, status: true },
+          },
+        },
+      });
+      console.log(`[USER SERVICE] Profile auto-created id: ${user.id}`);
+    }
+
+    return res.status(200).json({ success: true, data: user });
+  } catch (error) {
+    console.error("GET PROFILE ERROR:", error);
+    return res.status(500).json({ success: false, message: "Failed to fetch profile" });
+  }
+});
+
+///////////////////////////////////////////////////////////
+// ✏️ UPDATE MY PROFILE
+// Allowed: firstName, lastName, phone, department, designation
+// Blocked: role, authUserId, organizationId, email
+///////////////////////////////////////////////////////////
+
+router.put("/profile", verifyToken, async (req, res) => {
+  try {
+    const { firstName, lastName, phone, department, designation } = req.body;
+
+    const updateData = {};
+    if (firstName  !== undefined) updateData.firstName  = firstName;
+    if (lastName   !== undefined) updateData.lastName   = lastName;
+    if (phone      !== undefined) updateData.phone      = phone;
+    if (department !== undefined) updateData.department = department;
+    if (designation!== undefined) updateData.designation= designation;
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ success: false, message: "No valid fields to update" });
+    }
+
+    const updated = await prisma.user.update({
+      where: { authUserId: req.user.userId },
+      data: updateData,
+    });
+
+    return res.status(200).json({ success: true, message: "Profile updated", data: updated });
+  } catch (error) {
+    console.error("UPDATE PROFILE ERROR:", error);
+    return res.status(500).json({ success: false, message: "Failed to update profile" });
+  }
+});
+
 //////////////////////////////////////
 // 🏢 CREATE ORGANIZATION
 //////////////////////////////////////
@@ -82,9 +157,10 @@ router.post("/user", verifyToken, async (req, res) => {
       });
     }
 
-    if (!firstName || !lastName || !email) {
+    // lastName optional
+    if (!firstName || !email) {
       return res.status(400).json({
-        message: "firstName, lastName and email are required",
+        message: "firstName and email are required",
       });
     }
 

@@ -102,19 +102,85 @@ app.get("/health", (_req, res) => {
 app.get("/", (_req, res) => res.send("API Gateway Running..."));
 
 ///////////////////////////////////////////////////////////
+// 📝 REGISTER — Enriched Response
+//
+// 1. Auth Service mein register karo
+// 2. Token se userId, role nikalo
+// 3. User Service mein profile auto-create karo
+// 4. Enriched response bhejo
+///////////////////////////////////////////////////////////
+
+app.post("/api/auth/register", express.json(), async (req, res) => {
+  try {
+    const { email, password, role, firstName, lastName } = req.body;
+
+    // Step 1: Auth Service mein register karo
+    const authResponse = await axios.post(
+      `${SERVICES.AUTH}/api/auth/register`,
+      { email, password, role },
+      { headers: { "Content-Type": "application/json" } }
+    );
+
+    const { userId, accessToken, refreshToken } = authResponse.data.data;
+    const authHeader = { Authorization: `Bearer ${accessToken}` };
+
+    // Step 2: User Service mein profile create karo
+    let userProfile = null;
+    try {
+      const userRes = await axios.post(
+        `${SERVICES.USER}/api/user/user`,
+        {
+          authUserId:  userId,
+          email:       email,
+          firstName:   firstName || email.split("@")[0],
+          lastName:    lastName  || "",
+          role:        role      || "ORG_ADMIN",
+          // organizationId nahi dena — baad mein org create hogi
+        },
+        { headers: { ...authHeader, "Content-Type": "application/json" } }
+      );
+      userProfile = userRes.data?.user || null;
+      console.log("[GATEWAY] User profile created in User Service ✅");
+    } catch (userErr) {
+      // Profile creation fail ho toh registration mat roko
+      console.warn(
+        "[GATEWAY] User profile creation failed:",
+        userErr?.response?.data || userErr.message
+      );
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: "User registered successfully",
+      data: {
+        userId,
+        accessToken,
+        refreshToken,
+        user: userProfile,
+      },
+    });
+
+  } catch (error) {
+    const status  = error?.response?.status  || 500;
+    const message = error?.response?.data?.message || "Registration failed";
+    return res.status(status).json({ success: false, message });
+  }
+});
+
+///////////////////////////////////////////////////////////
 // 🔐 LOGIN — Enriched Response
 //
-// Gateway login ko intercept karta hai:
-// 1. Auth service se login karo → accessToken lo
-// 2. Token decode karo → userId, orgId nikalo
-// 3. User Service se user profile lo
-// 4. Subscription Service se active plan lo
+// 1. Auth Service se login karo → accessToken lo
+// 2. Token decode karo → userId, role nikalo
+// 3. User Service se profile fetch karo (authUserId se)
+//    → nahi mila toh auto-create karo (purane users)
+// 4. Org + Subscription fetch karo
 // 5. Sab ek saath client ko bhejo
 ///////////////////////////////////////////////////////////
 
 app.post("/api/auth/login", express.json(), async (req, res) => {
   try {
-    // Step 1: Auth service se login
+    // Step 1: Auth Service se login
     const authResponse = await axios.post(
       `${SERVICES.AUTH}/api/auth/login`,
       req.body,
@@ -125,65 +191,92 @@ app.post("/api/auth/login", express.json(), async (req, res) => {
 
     // Step 2: Token decode karo
     const decoded = jwt.decode(accessToken);
-    const userId  = decoded?.userId;
+    const userId  = decoded?.userId;   // yeh authUserId hai User Service ke liye
     const role    = decoded?.role;
+    const email   = decoded?.email;
 
     const authHeader = { Authorization: `Bearer ${accessToken}` };
 
-    let userProfile    = null;
-    let organization   = null;
-    let subscription   = null;
-    let plan           = null;
+    let userProfile  = null;
+    let organization = null;
+    let subscription = null;
+    let plan         = null;
 
-    // Step 3: User profile fetch karo (User Service)
+    // Step 3: User profile fetch karo
+    // GET /api/user/profile → authUserId se dhundta hai (correct!)
     try {
       const userRes = await axios.get(
-        `${SERVICES.USER}/api/user/user/${userId}`,
+        `${SERVICES.USER}/api/user/profile`,
         { headers: authHeader }
       );
-      userProfile = userRes.data;
+      userProfile = userRes.data?.data || null;
+    } catch (userErr) {
+      console.warn(
+        "[GATEWAY] User profile fetch failed:",
+        userErr?.response?.data || userErr.message
+      );
 
-      // Step 4: Organization fetch karo (agar organizationId ho)
-      const orgId = userProfile?.organizationId;
-
-      if (orgId) {
-        try {
-          const orgRes = await axios.get(
-            `${SERVICES.USER}/api/user/organization/${orgId}`,
-            { headers: authHeader }
-          );
-          organization = orgRes.data;
-        } catch {
-          console.warn("[GATEWAY] Organization fetch failed");
-        }
-
-        // Step 5: Subscription fetch karo
-        try {
-          const subRes = await axios.get(
-            `${SERVICES.SUBSCRIPTION}/api/subscription/subscription/${orgId}`,
-            { headers: authHeader }
-          );
-          subscription = subRes.data;
-        } catch {
-          console.warn("[GATEWAY] Subscription fetch failed");
-        }
-
-        // Step 6: Plan details fetch karo (check-limit se userLimit)
-        try {
-          const planRes = await axios.get(
-            `${SERVICES.SUBSCRIPTION}/api/subscription/check-limit/${orgId}`,
-            { headers: authHeader }
-          );
-          plan = planRes.data;
-        } catch {
-          console.warn("[GATEWAY] Plan fetch failed");
-        }
+      // Purana user — User Service mein record nahi → auto-create karo
+      try {
+        const createRes = await axios.post(
+          `${SERVICES.USER}/api/user/user`,
+          {
+            authUserId: userId,
+            email:      email || "",
+            firstName:  email ? email.split("@")[0] : "",
+            lastName:   "",
+            role:       role || "AGENT",
+          },
+          { headers: { ...authHeader, "Content-Type": "application/json" } }
+        );
+        userProfile = createRes.data?.user || null;
+        console.log("[GATEWAY] User profile auto-created ✅");
+      } catch (createErr) {
+        console.warn(
+          "[GATEWAY] User profile auto-create failed:",
+          createErr?.response?.data || createErr.message
+        );
       }
-    } catch {
-      console.warn("[GATEWAY] User profile fetch failed");
     }
 
-    // Step 7: Enriched response bhejo
+    // Step 4: Organization fetch karo (agar organizationId ho)
+    const orgId = userProfile?.organizationId;
+
+    if (orgId) {
+      try {
+        const orgRes = await axios.get(
+          `${SERVICES.USER}/api/user/organization/${orgId}`,
+          { headers: authHeader }
+        );
+        organization = orgRes.data?.data || null;
+      } catch {
+        console.warn("[GATEWAY] Organization fetch failed");
+      }
+
+      // Step 5: Subscription fetch karo
+      try {
+        const subRes = await axios.get(
+          `${SERVICES.SUBSCRIPTION}/api/subscription/subscription/${orgId}`,
+          { headers: authHeader }
+        );
+        subscription = subRes.data || null;
+      } catch {
+        console.warn("[GATEWAY] Subscription fetch failed");
+      }
+
+      // Step 6: Plan limit details
+      try {
+        const planRes = await axios.get(
+          `${SERVICES.SUBSCRIPTION}/api/subscription/check-limit/${orgId}`,
+          { headers: authHeader }
+        );
+        plan = planRes.data || null;
+      } catch {
+        console.warn("[GATEWAY] Plan fetch failed");
+      }
+    }
+
+    // Step 7: Enriched response
     return res.status(200).json({
       success: true,
       message: "Login successful",
@@ -197,12 +290,12 @@ app.post("/api/auth/login", express.json(), async (req, res) => {
         },
         organization: organization || null,
         subscription: subscription || null,
-        plan: plan || null,
+        plan:         plan         || null,
       },
     });
 
   } catch (error) {
-    const status = error?.response?.status || 500;
+    const status  = error?.response?.status  || 500;
     const message = error?.response?.data?.message || "Login failed";
     return res.status(status).json({ success: false, message });
   }
@@ -214,7 +307,6 @@ app.post("/api/auth/login", express.json(), async (req, res) => {
 
 app.use(
   createProxy(SERVICES.AUTH, [
-    "/api/auth/register",
     "/api/auth/refresh",
     "/api/auth/verify-email",
     "/api/auth/reset-password",

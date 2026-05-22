@@ -50,6 +50,7 @@ const generateAccessToken = (user) => {
     {
       userId: user.id,
       role: user.role,
+      email: user.email,   // auto-create profile ke liye zaroor
     },
     process.env.JWT_SECRET,
     {
@@ -187,40 +188,68 @@ router.post("/register", async (req, res) => {
       data: { refreshToken },
     });
 
+    ////////////////////////////////////////////////////////
+    // Auto-create User Profile in User Service
+    // Register hote hi User Service mein profile ban jaaye
+    ////////////////////////////////////////////////////////
+    try {
+      console.log("[AUTH] Creating user profile in User Service...");
+
+      const userServiceUrl = process.env.USER_SERVICE_URL || "http://localhost:5002";
+
+      await axios.post(
+        `${userServiceUrl}/api/user/user`,
+        {
+          authUserId: user.id,
+          firstName: email.split("@")[0],   // placeholder — baad mein update ho sakta hai
+          lastName: "",
+          email: email,
+          role: role || "ORG_ADMIN",
+          // organizationId: undefined — SUPER_ADMIN ko chahiye nahi
+          //                           — ORG_ADMIN baad mein org create karke link karega
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      console.log("[AUTH] User profile created in User Service ✅");
+
+    } catch (userServiceError) {
+      // Profile creation fail ho toh registration rok mat —
+      // sirf log karo, user manually baad mein bana sakta hai
+      console.error(
+        "[AUTH] User Service profile creation failed:",
+        userServiceError?.response?.data || userServiceError.message
+      );
+    }
+
+    ////////////////////////////////////////////////////////
+    // Send notification (non-blocking)
+    ////////////////////////////////////////////////////////
     try {
       console.log("Sending notification...");
-    
+
       const notificationResponse = await sendNotification({
         token: accessToken,
-    
-        // internal notification
         userId: user.id,
-    
         title: "Account Created",
         message: "Welcome to Swaryx AI Platform",
-    
-        // email
         sendEmail: true,
-    
         to: email,
-    
         subject: "Welcome to Swaryx AI",
-    
         html: `
           <h1>Welcome ${email}</h1>
-    
-          <p>
-            Your account has been created successfully.
-          </p>
-    
-          <p>
-            Role: ${role || "ORG_ADMIN"}
-          </p>
+          <p>Your account has been created successfully.</p>
+          <p>Role: ${role || "ORG_ADMIN"}</p>
         `,
       });
-    
+
       console.log("Notification Response:", notificationResponse);
-    
+
     } catch (notificationError) {
       console.error(
         "Notification Failed:",
