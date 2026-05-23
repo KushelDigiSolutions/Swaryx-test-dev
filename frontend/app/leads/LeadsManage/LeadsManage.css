@@ -1,0 +1,777 @@
+.leadsManageRoot {
+  padding: 28px 32px;
+}
+ 
+/* ============================================
+   HEADER
+   ============================================ */
+.leadsManageHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+ 
+.leadsManageHTitle {
+  font-size: 24px;
+  font-weight: 800;
+  color: #f0f0f5;
+  letter-spacing: -0.3px;
+  margin-bottom: 4px;
+}
+ 
+.leadsManageHSub {
+  font-size: 13px;
+  color: #8a8a9e;
+}
+ 
+/* Filter Buttons */
+.leadsManageFilters {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+ 
+.leadsManageFbtn {
+  background: #18181e;
+  border: 1px solid #2a2a35;
+  color: #8a8a9e;
+  border-radius: 20px;
+  padding: 7px 16px;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+ 
+.leadsManageFbtn:hover {
+  border-color: #00e5cc;
+  color: #f0f0f5;
+}
+ 
+.leadsManageFbtnActive {
+  border-color: #00e5cc !important;
+  color: #f0f0f5 !important;
+}
+ 
+.leadsManageFbtnIcon {
+  background: #18181e;
+  border: 1px solid #2a2a35;
+  color: #8a8a9e;
+  border-radius: 20px;
+  padding: 7px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+ 
+.leadsManageFbtnIcon:hover {
+  border-color: #00e5cc;
+  color: #f0f0f5;
+}
+ 
+/* ============================================
+   MAIN GRID LAYOUT
+   ============================================ */
+.leadsManageMain {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 18px;
+  align-items: start;
+}
+ 
+.leadsManageLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+ 
+.leadsManageBottomRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+ 
+/* Card base */
+.leadsManageCard {
+  background: #141418;
+  border: 1px solid #2a2a35;
+  border-radius: 16px;
+  overflow: hidden;
+}
+ 
+.leadsManageCardPad {
+  background: #141418;
+  border: 1px solid #2a2a35;
+  border-radius: 16px;
+  padding: 20px;
+}
+ 
+/* ============================================
+   LEAD TABLE
+   ============================================ */
+.leadsManageTblHeader {
+  display: grid;
+  grid-template-columns: 2fr 1.6fr 1fr 1fr 1.2fr;
+  padding: 14px 20px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: #5a5a70;
+  border-bottom: 1px solid #2a2a35;
+  text-transform: uppercase;
+}
+ 
+.leadsManageRow {
+  display: grid;
+  grid-template-columns: 2fr 1.6fr 1fr 1fr 1.2fr;
+  padding: 16px 20px;
+  align-items: center;
+  border-bottom: 1px solid #1e1e28;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+ 
+.leadsManageRow:last-child {
+  border-bottom: none;
+}
+ 
+.leadsManageRow:hover {
+  background: #1a1a22;
+}
+ 
+.leadsManageRowActive {
+  background: #1c1c26;
+  border-left: 2px solid #00e5cc;
+}
+ 
+/* Columns */
+.leadsManageColLead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+ 
+.leadsManageColIntent {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-right: 12px;
+}
+ 
+.leadsManageColBudget,
+.leadsManageColSource,
+.leadsManageColAistat {
+  display: flex;
+  align-items: center;
+}
+ 
+/* Avatar */
+.leadsManageAvatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  letter-spacing: 0.5px;
+}
+ 
+.leadsManageAvatarPurple { background: #a78bfa22; color: #a78bfa; border: 1.5px solid #a78bfa44; }
+.leadsManageAvatarBlue   { background: #60a5fa22; color: #60a5fa; border: 1.5px solid #60a5fa44; }
+.leadsManageAvatarPink   { background: #f472b622; color: #f472b6; border: 1.5px solid #f472b644; }
+.leadsManageAvatarGreen  { background: #34d39922; color: #34d399; border: 1.5px solid #34d39944; }
+ 
+/* Lead text */
+.leadsManageLeadName {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #e8e8f0;
+  line-height: 1.3;
+}
+ 
+.leadsManageLeadCo {
+  font-size: 11.5px;
+  color: #5a5a70;
+  margin-top: 2px;
+}
+ 
+/* Intent Bar */
+.leadsManageIbar {
+  flex: 1;
+  height: 4px;
+  background: #2a2a35;
+  border-radius: 99px;
+  overflow: hidden;
+}
+ 
+.leadsManageIfill {
+  height: 100%;
+  border-radius: 99px;
+}
+ 
+.leadsManageBarCyan   { background: #00e5cc; box-shadow: 0 0 8px #00e5cc80; }
+.leadsManageBarPurple { background: #7c6af7; box-shadow: 0 0 8px #7c6af780; }
+.leadsManageBarMuted  { background: #5a5a70; }
+ 
+/* Score number */
+.leadsManageIscore {
+  font-size: 13px;
+  font-weight: 700;
+  min-width: 26px;
+  text-align: right;
+}
+ 
+.leadsManageScoreCyan   { color: #00e5cc; }
+.leadsManageScorePurple { color: #7c6af7; }
+.leadsManageScoreMuted  { color: #5a5a70; }
+ 
+/* Budget */
+.leadsManageBudget {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #c8c8d8;
+}
+ 
+/* Source badge */
+.leadsManageSrcBadge {
+  background: #1e1e2e;
+  border: 1px solid #33333f;
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 12px;
+  color: #8a8a9e;
+}
+ 
+/* Status badges */
+.leadsManageStatBadge {
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+ 
+.leadsManageUrgent     { background: #ff4d6d18; color: #ff6b82;  border: 1px solid #ff4d6d44; }
+.leadsManageInvestor   { background: #7c6af718; color: #9d8ff9;  border: 1px solid #7c6af744; }
+.leadsManageHighGrowth { background: #00e5cc18; color: #00e5cc;  border: 1px solid #00e5cc44; }
+.leadsManageWarmLead   { background: #5a5a7018; color: #8a8aaa;  border: 1px solid #5a5a7044; }
+ 
+/* ============================================
+   PREDICTIVE REVENUE CARD
+   ============================================ */
+.leadsManageRevCard {
+  background: #141418;
+  border: 1px solid #2a2a35;
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 200px;
+}
+ 
+.leadsManageRevHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+ 
+.leadsManageRevTitle {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #e8e8f0;
+}
+ 
+.leadsManageRevTrend {
+  font-size: 20px;
+  color: #00e5cc;
+  font-weight: 700;
+}
+ 
+.leadsManageRevAmount {
+  font-size: 36px;
+  font-weight: 800;
+  color: #f0f0f5;
+  letter-spacing: -1.5px;
+  line-height: 1.1;
+  margin-top: 4px;
+}
+ 
+.leadsManageRevChange {
+  font-size: 11.5px;
+  color: #00e5cc;
+  font-weight: 500;
+}
+ 
+/* Bar Chart */
+.leadsManageChart {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 70px;
+  margin-top: 12px;
+  flex: 1;
+}
+ 
+.leadsManageBarW {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+}
+ 
+.leadsManageBar {
+  width: 100%;
+  border-radius: 4px 4px 2px 2px;
+  background: #2a2a45;
+}
+ 
+.leadsManageBarViolet { background: linear-gradient(180deg, #9d8ff9, #7c6af7); }
+.leadsManageBarTeal   { background: linear-gradient(180deg, #00e5cc, #00bfa8); }
+.leadsManageBarGlow   { box-shadow: 0 0 12px #00e5cc60, 0 -4px 20px #00e5cc30; }
+ 
+/* ============================================
+   AI EFFICIENCY CARD
+   ============================================ */
+.leadsManageAiCard {
+  background: #141418;
+  border: 1px solid #2a2a35;
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-height: 200px;
+}
+ 
+.leadsManageAiHeader {
+  width: 100%;
+  display: flex;
+  align-items: center;
+}
+ 
+.leadsManageAiTitle {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #e8e8f0;
+}
+ 
+.leadsManageAiSub {
+  font-size: 11.5px;
+  color: #5a5a70;
+  align-self: flex-start;
+  margin-bottom: 8px;
+}
+ 
+.leadsManageGaugeWrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+ 
+.leadsManageOptlabel {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #5a5a70;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+ 
+/* ============================================
+   LEAD PROFILE (right panel)
+   ============================================ */
+.leadsManageProfileHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+ 
+.leadsManageAvWrap {
+  position: relative;
+  width: 68px;
+  height: 68px;
+}
+ 
+.leadsManageAvBig {
+  width: 68px;
+  height: 68px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #a78bfa22, #7c6af755);
+  border: 2px solid #7c6af766;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 800;
+  color: #c4b5fd;
+  letter-spacing: 1px;
+}
+ 
+.leadsManageOnline {
+  position: absolute;
+  bottom: 0px;
+  right: 0px;
+  width: 12px;
+  height: 12px;
+  background: #00e5cc;
+  border-radius: 50%;
+  border: 2px solid #141418;
+  box-shadow: 0 0 8px #00e5cc80;
+}
+ 
+.leadsManageMoreBtn {
+  background: #1e1e28;
+  border: 1px solid #2a2a35;
+  color: #8a8a9e;
+  border-radius: 8px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 16px;
+  letter-spacing: 2px;
+  line-height: 1;
+  transition: background 0.2s;
+}
+ 
+.leadsManageMoreBtn:hover {
+  background: #2a2a35;
+}
+ 
+.leadsManagePname {
+  font-size: 22px;
+  font-weight: 700;
+  color: #f0f0f5;
+  letter-spacing: -0.3px;
+  margin-bottom: 4px;
+}
+ 
+.leadsManageProle {
+  font-size: 13px;
+  color: #00e5cc;
+  font-weight: 500;
+  margin-bottom: 18px;
+}
+ 
+/* Score Card */
+.leadsManageScoreCard {
+  background: #1a1a22;
+  border: 1px solid #2a2a35;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 18px;
+}
+ 
+.leadsManageScLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #5a5a70;
+  text-transform: uppercase;
+}
+ 
+.leadsManageScRow {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+ 
+.leadsManageScVal {
+  font-size: 56px;
+  font-weight: 800;
+  color: #f0f0f5;
+  line-height: 1;
+  letter-spacing: -2px;
+}
+ 
+.leadsManageScMax {
+  font-size: 18px;
+  color: #5a5a70;
+  font-weight: 500;
+}
+ 
+.leadsManageScTags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+ 
+.leadsManageTagG {
+  background: #00e5cc15;
+  border: 1px solid #00e5cc40;
+  color: #00e5cc;
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+ 
+.leadsManageTagP {
+  background: #7c6af715;
+  border: 1px solid #7c6af740;
+  color: #9d8ff9;
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+ 
+/* AI Summary */
+.leadsManageSumLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #5a5a70;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+ 
+.leadsManageSumBox {
+  background: #1a1a22;
+  border: 1px solid #2a2a35;
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 18px;
+}
+ 
+.leadsManageSumText {
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: #a0a0b8;
+  font-style: italic;
+  margin-bottom: 14px;
+}
+ 
+.leadsManageSumFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+ 
+.leadsManageRecRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+ 
+@keyframes leadsManagePulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+ 
+.leadsManageRecDot {
+  width: 6px;
+  height: 6px;
+  background: #ff4d6d;
+  border-radius: 50%;
+  box-shadow: 0 0 6px #ff4d6d;
+  animation: leadsManagePulse 1.5s infinite;
+}
+ 
+.leadsManageRecLabel {
+  font-size: 11px;
+  color: #5a5a70;
+}
+ 
+.leadsManageTranscriptBtn {
+  background: transparent;
+  border: none;
+  color: #00e5cc;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.2s;
+}
+ 
+.leadsManageTranscriptBtn:hover {
+  opacity: 0.7;
+}
+ 
+/* Action Buttons */
+.leadsManageActionRow {
+  display: flex;
+  gap: 10px;
+}
+ 
+.leadsManageCallBtn {
+  flex: 1;
+  background: linear-gradient(135deg, #00e5cc, #00bfa8);
+  border: none;
+  border-radius: 10px;
+  padding: 12px 16px;
+  color: #0d1a17;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-family: inherit;
+  box-shadow: 0 4px 20px #00e5cc30;
+  transition: opacity 0.2s, transform 0.1s;
+}
+ 
+.leadsManageCallBtn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+ 
+.leadsManageSchedBtn {
+  flex: 1;
+  background: #1e1e28;
+  border: 1px solid #2a2a35;
+  border-radius: 10px;
+  padding: 12px 16px;
+  color: #c0c0d0;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-family: inherit;
+  transition: background 0.2s, transform 0.1s;
+}
+ 
+.leadsManageSchedBtn:hover {
+  background: #2a2a38;
+  transform: translateY(-1px);
+}
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+/* Tablet */
+@media (max-width: 1024px) {
+  .leadsManageMain {
+    grid-template-columns: 1fr;
+  }
+
+  .leadsManageCardPad {
+    margin-top: 10px;
+  }
+
+  .leadsManageBottomRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Mobile Large */
+@media (max-width: 768px) {
+
+  .leadsManageRoot {
+    padding: 20px 16px;
+  }
+
+  /* Header */
+  .leadsManageHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+
+  .leadsManageFilters {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  /* Table Scroll */
+  .leadsManageCard {
+    overflow-x: auto;
+  }
+
+  .leadsManageTblHeader,
+  .leadsManageRow {
+    min-width: 650px;
+  }
+
+  /* Bottom cards */
+  .leadsManageRevCard,
+  .leadsManageAiCard {
+    min-height: auto;
+  }
+
+  /* Profile panel */
+  .leadsManagePname {
+    font-size: 20px;
+  }
+
+  .leadsManageScVal {
+    font-size: 44px;
+  }
+}
+
+/* Mobile Small */
+@media (max-width: 480px) {
+
+  .leadsManageRoot {
+    padding: 16px 12px;
+  }
+
+  .leadsManageHTitle {
+    font-size: 20px;
+  }
+
+  .leadsManageHSub {
+    font-size: 12px;
+  }
+
+  /* Buttons */
+  .leadsManageFbtn,
+  .leadsManageFbtnIcon {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  /* Profile */
+  .leadsManageProfileHeader {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .leadsManageAvBig {
+    width: 56px;
+    height: 56px;
+    font-size: 16px;
+  }
+
+  /* Score */
+  .leadsManageScVal {
+    font-size: 36px;
+  }
+
+  /* Action buttons */
+  .leadsManageActionRow {
+    flex-direction: column;
+  }
+
+  .leadsManageCallBtn,
+  .leadsManageSchedBtn {
+    width: 100%;
+  }
+}
