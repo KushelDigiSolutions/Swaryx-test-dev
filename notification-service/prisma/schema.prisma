@@ -12,27 +12,157 @@ datasource db {
   
 }
 
-model Notification {
-  id          String   @id @default(uuid())
-  userId      String
-  type        NotificationType
-  title       String
-  message     String
-
-  status      NotificationStatus @default(PENDING)
-
-  createdAt   DateTime @default(now())
-  sentAt      DateTime?
-}
+// ─────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────
 
 enum NotificationType {
+  IN_APP
   EMAIL
   SMS
-  WHATSAPP
+  PUSH
 }
 
 enum NotificationStatus {
-  PENDING
+  QUEUED
   SENT
+  DELIVERED
   FAILED
+  READ
+}
+
+enum NotificationPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum TemplateType {
+  WELCOME
+  EMAIL_VERIFY
+  PASSWORD_RESET
+  INVITE
+  SUBSCRIPTION_UPGRADE
+  SUBSCRIPTION_CANCEL
+  INVOICE_PAID
+  TRIAL_ENDING
+  GENERAL
+}
+
+// ─────────────────────────────────────────────
+// NOTIFICATION — Single notification record
+// ─────────────────────────────────────────────
+
+model Notification {
+  id         String               @id @default(uuid())
+  userId     String               // authUserId from Auth Service
+  title      String
+  body       String
+  type       NotificationType     @default(IN_APP)
+  status     NotificationStatus   @default(QUEUED)
+  priority   NotificationPriority @default(NORMAL)
+
+  // IN_APP fields
+  link       String?
+  isRead     Boolean  @default(false)
+  readAt     DateTime?
+
+  // Email fields
+  toEmail    String?
+  subject    String?
+  htmlBody   String?
+
+  // SMS / Push fields
+  toPhone    String?
+  pushToken  String?
+
+  // Metadata
+  metadata   Json?
+  templateId String?
+  template   NotificationTemplate? @relation(fields: [templateId], references: [id])
+
+  // Delivery tracking
+  sentAt       DateTime?
+  deliveredAt  DateTime?
+  failedAt     DateTime?
+  failReason   String?
+  retryCount   Int @default(0)
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  logs DeliveryLog[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([type])
+  @@index([isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+// ─────────────────────────────────────────────
+// NOTIFICATION TEMPLATE
+// ─────────────────────────────────────────────
+
+model NotificationTemplate {
+  id       String       @id @default(uuid())
+  name     String       @unique
+  type     TemplateType
+  subject  String?      // for email
+  body     String       // supports {{variable}} placeholders
+  htmlBody String?      // email HTML with placeholders
+  isActive Boolean      @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  notifications Notification[]
+
+  @@map("notification_templates")
+}
+
+// ─────────────────────────────────────────────
+// DELIVERY LOG — Every send attempt
+// ─────────────────────────────────────────────
+
+model DeliveryLog {
+  id             String             @id @default(uuid())
+  notificationId String
+  notification   Notification       @relation(fields: [notificationId], references: [id])
+  status         NotificationStatus
+  attempt        Int
+  provider       String?            // "sendgrid", "twilio", "fcm"
+  providerRef    String?            // provider's message ID
+  errorMessage   String?
+  sentAt         DateTime           @default(now())
+
+  @@index([notificationId])
+  @@map("delivery_logs")
+}
+
+// ─────────────────────────────────────────────
+// USER PREFERENCES — Per-user notification settings
+// ─────────────────────────────────────────────
+
+model NotificationPreference {
+  id     String @id @default(uuid())
+  userId String @unique
+
+  // Channels
+  emailEnabled Boolean @default(true)
+  smsEnabled   Boolean @default(false)
+  pushEnabled  Boolean @default(true)
+  inAppEnabled Boolean @default(true)
+
+  // Per-category toggles (JSON for flexibility)
+  // e.g. { "billing": { "email": true, "sms": false }, "security": { "email": true } }
+  categoryPrefs Json @default("{}")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("notification_preferences")
 }

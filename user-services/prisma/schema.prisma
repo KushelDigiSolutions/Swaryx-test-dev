@@ -13,73 +13,154 @@ datasource db {
 }
 
 
-
-model Organization {
-  id              String   @id @default(uuid())
-  name            String
-  slug            String   @unique
-
-  // marketing 🔥
-  industry        String?
-  companySize     String?
-  website         String?
-
-  country         String?
-  timezone        String?
-
-  ownerId         String   // auth user id
-  subscriptionId  String?
-
-  status          OrgStatus @default(ACTIVE)
-
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  users           User[]
-
-  @@index([slug])
-}
-
-model User {
-  id              String   @id @default(uuid())
-  authUserId      String   @unique   // bridge to auth service
-
-  organizationId  String?
-  organization    Organization? @relation(fields: [organizationId], references: [id])
-
-  firstName       String
-  lastName        String
-  email           String
-  phone           String?
-
-  role            Role
-
-  // CRM / HR fields 🔥
-  department      String?
-  designation     String?
-  employeeId      String?
-
-  isActive        Boolean @default(true)
-  lastLoginAt     DateTime?
-
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  @@index([organizationId])
-}
-
-enum OrgStatus {
-  ACTIVE
-  SUSPENDED
-  DELETED
-}
+// ─────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────
 
 enum Role {
   SUPER_ADMIN
   PLATFORM_ADMIN
   SUPPORT_AGENT
-
   ORG_ADMIN
-  MANAGER
-  AGENT
+  ORG_MANAGER
+  ORG_USER
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+enum OrgPlan {
+  FREE
+  STARTER
+  GROWTH
+  ENTERPRISE
+}
+
+// ─────────────────────────────────────────────
+// USER PROFILE — Linked to Auth Service by authUserId
+// ─────────────────────────────────────────────
+
+model UserProfile {
+  id           String   @id @default(uuid())
+  authUserId   String   @unique   // FK to Auth Service (cross-service, no join)
+  email        String   @unique
+  firstName    String
+  lastName     String   @default("")
+  displayName  String?
+  avatarUrl    String?
+  phone        String?
+  timezone     String   @default("UTC")
+  locale       String   @default("en")
+  role         Role     @default(ORG_USER)
+
+  // Relations
+  organizationId String?
+  organization   Organization?        @relation(fields: [organizationId], references: [id])
+  memberships    OrganizationMember[]
+  sentInvites    Invitation[]         @relation("InvitedBy")
+
+  // Soft delete
+  isActive  Boolean   @default(true)
+  deletedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([authUserId])
+  @@index([email])
+  @@index([organizationId])
+  @@map("user_profiles")
+}
+
+// ─────────────────────────────────────────────
+// ORGANIZATION
+// ─────────────────────────────────────────────
+
+model Organization {
+  id          String  @id @default(uuid())
+  name        String
+  slug        String  @unique   // used in URLs, e.g. acme-corp
+  description String?
+  logoUrl     String?
+  website     String?
+  industry    String?
+  size        String? // "1-10", "11-50", "51-200", etc.
+
+  // Billing reference (Subscription Service owns the full record)
+  plan        OrgPlan @default(FREE)
+
+  // Contact
+  billingEmail String?
+  phone        String?
+  country      String?
+  address      String?
+
+  // Status
+  isActive  Boolean   @default(true)
+  deletedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  members     UserProfile[]
+  memberships OrganizationMember[]
+  invitations Invitation[]
+
+  @@index([slug])
+  @@map("organizations")
+}
+
+// ─────────────────────────────────────────────
+// ORGANIZATION MEMBER — Role scoped to org
+// ─────────────────────────────────────────────
+
+model OrganizationMember {
+  id             String  @id @default(uuid())
+  userId         String
+  organizationId String
+  role           Role    @default(ORG_USER)
+  isActive       Boolean @default(true)
+
+  joinedAt  DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user         UserProfile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+  @@index([userId])
+  @@map("organization_members")
+}
+
+// ─────────────────────────────────────────────
+// INVITATION — Invite users to an organization
+// ─────────────────────────────────────────────
+
+model Invitation {
+  id             String       @id @default(uuid())
+  email          String
+  role           Role         @default(ORG_USER)
+  token          String       @unique @default(uuid())
+  status         InviteStatus @default(PENDING)
+  expiresAt      DateTime
+
+  organizationId String
+  invitedById    String
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invitedBy    UserProfile  @relation("InvitedBy", fields: [invitedById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@index([token])
+  @@index([organizationId])
+  @@map("invitations")
 }

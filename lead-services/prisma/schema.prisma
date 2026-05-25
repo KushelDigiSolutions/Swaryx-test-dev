@@ -1,0 +1,327 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+
+// ============================================================
+// LEAD SERVICE — schema.prisma
+// ============================================================
+// Ye service in cheezon ko handle karti hai:
+//  - Leads (manual, CSV import, Facebook Ads, API)
+//  - Lead Activities (call logs, notes, status changes)
+//  - Lead Sources (Facebook, Website, API, Manual)
+//  - Pipeline Stages (drag-drop CRM funnel)
+//  - Lead Assignments (agent ko assign karna)
+//  - Lead Scoring (Hot/Warm/Cold)
+//  - Follow-up Tasks
+//  - Bulk Import Jobs
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"  
+}
+
+datasource db {
+  provider = "postgresql"
+  
+}
+
+
+
+
+// ─────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────
+
+enum LeadStatus {
+  NEW           // Just added, not contacted
+  CONTACTED     // First call/message done
+  QUALIFIED     // Budget + intent confirmed
+  VISIT_SCHEDULED // Site visit booked
+  NEGOTIATING   // In discussion
+  CLOSED_WON    // Deal closed
+  CLOSED_LOST   // Deal lost
+  JUNK          // Invalid/spam lead
+}
+
+enum LeadScore {
+  HOT           // High intent, ready to buy
+  WARM          // Interested but not urgent
+  COLD          // Low intent or unresponsive
+}
+
+enum LeadSource {
+  MANUAL        // Added by agent/admin
+  CSV_IMPORT    // Bulk uploaded
+  FACEBOOK_ADS  // Facebook Lead Ads webhook
+  WEBSITE_FORM  // Website contact form
+  API           // External API push
+  WHATSAPP      // WhatsApp integration
+  REFERRAL      // Referred by existing client
+}
+
+enum PropertyType {
+  APARTMENT
+  VILLA
+  PLOT
+  COMMERCIAL
+  OFFICE
+  WAREHOUSE
+  OTHER
+}
+
+enum ActivityType {
+  CALL_MADE          // Outbound call placed
+  CALL_RECEIVED      // Inbound call received
+  AI_CALL            // AI auto-call placed
+  SMS_SENT
+  EMAIL_SENT
+  NOTE_ADDED
+  STATUS_CHANGED
+  ASSIGNED
+  FOLLOW_UP_SCHEDULED
+  APPOINTMENT_BOOKED
+  DOCUMENT_SHARED
+}
+
+enum FollowUpStatus {
+  PENDING
+  COMPLETED
+  MISSED
+  CANCELLED
+}
+
+enum ImportStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum PipelineStage {
+  NEW_LEAD
+  CONTACTED
+  INTERESTED
+  VISIT_SCHEDULED
+  CLOSED
+}
+
+// ─────────────────────────────────────────────
+// LEAD — Core lead record
+// ─────────────────────────────────────────────
+
+model Lead {
+  id             String      @id @default(uuid())
+  organizationId String      // FK to Organization (User Service)
+  assignedToId   String?     // authUserId of assigned agent (Auth Service)
+
+  // Contact Info
+  firstName      String
+  lastName       String      @default("")
+  phone          String
+  email          String?
+  alternatePhone String?
+
+  // Property Interest
+  propertyType   PropertyType?
+  budget         Decimal?    @db.Decimal(14, 2)
+  budgetMin      Decimal?    @db.Decimal(14, 2)
+  budgetMax      Decimal?    @db.Decimal(14, 2)
+  location       String?     // Preferred area/city
+  bhkPreference  String?     // "2BHK", "3BHK", etc.
+  possession     String?     // "Ready to move", "Under construction"
+
+  // Lead Meta
+  source         LeadSource  @default(MANUAL)
+  status         LeadStatus  @default(NEW)
+  score          LeadScore   @default(COLD)
+  pipelineStage  PipelineStage @default(NEW_LEAD)
+
+  // AI Insights (filled by Calling Service after AI call)
+  aiSentiment    String?     // "positive" | "neutral" | "negative"
+  aiBuyingIntent Int?        // 0-100 score
+  aiSummary      String?     // AI-generated summary of conversation
+  aiExtracted    Json?       // { budget, location, timeline, objections }
+
+  // External IDs (for integrations)
+  facebookLeadId String?     // Facebook Lead Ads lead ID
+  externalRef    String?     // Any external CRM reference
+
+  // Notes
+  notes          String?
+
+  // Soft delete
+  isActive       Boolean     @default(true)
+  deletedAt      DateTime?
+
+  // Dates
+  lastContactedAt DateTime?
+  nextFollowUpAt  DateTime?
+  closedAt        DateTime?
+
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  // Relations
+  activities     LeadActivity[]
+  followUps      LeadFollowUp[]
+  calls          LeadCall[]
+  tags           LeadTag[]
+
+  @@index([organizationId])
+  @@index([assignedToId])
+  @@index([status])
+  @@index([score])
+  @@index([source])
+  @@index([phone])
+  @@index([pipelineStage])
+  @@index([createdAt])
+  @@map("leads")
+}
+
+// ─────────────────────────────────────────────
+// LEAD ACTIVITY — Timeline of all events
+// ─────────────────────────────────────────────
+
+model LeadActivity {
+  id             String       @id @default(uuid())
+  leadId         String
+  lead           Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  performedById  String       // authUserId (agent or system)
+  type           ActivityType
+  title          String       // Short summary e.g. "Call made - no answer"
+  description    String?      // Detailed notes
+  metadata       Json?        // Extra data — call duration, email ID, etc.
+
+  createdAt      DateTime     @default(now())
+
+  @@index([leadId])
+  @@index([performedById])
+  @@index([type])
+  @@index([createdAt])
+  @@map("lead_activities")
+}
+
+// ─────────────────────────────────────────────
+// LEAD FOLLOW-UP — Scheduled follow-up tasks
+// ─────────────────────────────────────────────
+
+model LeadFollowUp {
+  id             String         @id @default(uuid())
+  leadId         String
+  lead           Lead           @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  assignedToId   String         // authUserId
+  title          String
+  description    String?
+  scheduledAt    DateTime
+  completedAt    DateTime?
+  status         FollowUpStatus @default(PENDING)
+  channel        String         @default("CALL") // CALL | SMS | EMAIL | WHATSAPP
+
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([leadId])
+  @@index([assignedToId])
+  @@index([scheduledAt])
+  @@index([status])
+  @@map("lead_follow_ups")
+}
+
+// ─────────────────────────────────────────────
+// LEAD CALL — Quick reference to calls on a lead
+// (Full call detail is in Calling Service)
+// ─────────────────────────────────────────────
+
+model LeadCall {
+  id             String   @id @default(uuid())
+  leadId         String
+  lead           Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  callId         String   @unique  // FK to Calling Service call record
+  initiatedById  String?           // authUserId (null = AI call)
+  isAiCall       Boolean  @default(false)
+  duration       Int?              // seconds
+  outcome        String?           // "answered" | "no_answer" | "busy" | "voicemail"
+  recordingUrl   String?
+  summary        String?
+
+  createdAt      DateTime @default(now())
+
+  @@index([leadId])
+  @@index([callId])
+  @@map("lead_calls")
+}
+
+// ─────────────────────────────────────────────
+// LEAD TAG — Labels for filtering
+// ─────────────────────────────────────────────
+
+model LeadTag {
+  id             String   @id @default(uuid())
+  leadId         String
+  lead           Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  organizationId String
+  tag            String   // e.g. "vip", "urgent", "do-not-call"
+
+  @@unique([leadId, tag])
+  @@index([organizationId, tag])
+  @@map("lead_tags")
+}
+
+// ─────────────────────────────────────────────
+// BULK IMPORT JOB — Track CSV import progress
+// ─────────────────────────────────────────────
+
+model BulkImportJob {
+  id             String       @id @default(uuid())
+  organizationId String
+  uploadedById   String       // authUserId
+  fileName       String
+  totalRows      Int          @default(0)
+  successCount   Int          @default(0)
+  failedCount    Int          @default(0)
+  status         ImportStatus @default(PENDING)
+  errors         Json?        // Array of { row, error }
+  fileUrl        String?      // S3/storage path
+
+  startedAt      DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId])
+  @@index([status])
+  @@map("bulk_import_jobs")
+}
+
+// ─────────────────────────────────────────────
+// LEAD SOURCE CONFIG — Per-org integration setup
+// (Facebook App credentials, webhook secrets, etc.)
+// ─────────────────────────────────────────────
+
+model LeadSourceConfig {
+  id             String     @id @default(uuid())
+  organizationId String     @unique
+  source         LeadSource
+
+  // Facebook Ads
+  fbPageId       String?
+  fbAccessToken  String?    // Encrypted
+  fbFormId       String?
+
+  // Website form webhook
+  webhookSecret  String?
+
+  // API key for external push
+  apiKey         String?    @unique
+
+  isActive       Boolean    @default(true)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@index([organizationId])
+  @@map("lead_source_configs")
+}

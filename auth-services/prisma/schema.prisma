@@ -13,30 +13,127 @@ datasource db {
 }
 
 
-model UserAuth {
-  id            String   @id @default(uuid())
-  email         String   @unique
-  password      String
-  role          Role
-  isVerified    Boolean  @default(false)
-
-  // security 🔐
-  failedAttempts Int     @default(0)
-  isLocked       Boolean @default(false)
-
-  // tokens
-  refreshToken   String?
-
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-}
+// ─────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────
 
 enum Role {
-  SUPER_ADMIN
-  PLATFORM_ADMIN
-  SUPPORT_AGENT
+  // Platform-level roles
+  SUPER_ADMIN       // Full platform control
+  PLATFORM_ADMIN    // Manages platform settings, orgs
+  SUPPORT_AGENT     // Read-only support access
 
-  ORG_ADMIN
-  MANAGER
-  AGENT
+  // Organization-level roles
+  ORG_ADMIN         // Owns the organization account
+  ORG_MANAGER       // Manages teams & members
+  ORG_USER          // Regular end user
+}
+
+enum AuthProvider {
+  EMAIL
+  GOOGLE
+  GITHUB
+}
+
+enum AuditAction {
+  REGISTER
+  LOGIN
+  LOGOUT
+  PASSWORD_RESET
+  EMAIL_VERIFIED
+  TOKEN_REFRESHED
+  LOGIN_FAILED
+  ACCOUNT_LOCKED
+  PROVISION_USER
+}
+
+// ─────────────────────────────────────────────
+// USER AUTH — Core credentials table
+// ─────────────────────────────────────────────
+
+model UserAuth {
+  id       String       @id @default(uuid())
+  email    String       @unique
+  password String?      // null for OAuth users
+  role     Role         @default(ORG_USER)
+  provider AuthProvider @default(EMAIL)
+
+  // Verification
+  isVerified          Boolean  @default(false)
+  verificationToken   String?
+  verificationExpiry  DateTime?
+
+  // Password Reset
+  resetToken          String?
+  resetTokenExpiry    DateTime?
+
+  // Security
+  failedAttempts      Int      @default(0)
+  isLocked            Boolean  @default(false)
+  lockedUntil         DateTime?
+  lastLoginAt         DateTime?
+  lastLoginIp         String?
+  mustChangePassword  Boolean  @default(false)
+
+  // Tokens
+  refreshToken        String?
+
+  // Soft delete
+  isActive            Boolean  @default(true)
+  deletedAt           DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  sessions  UserSession[]
+  auditLogs AuditLog[]
+
+  @@index([email])
+  @@index([role])
+  @@map("user_auth")
+}
+
+// ─────────────────────────────────────────────
+// USER SESSION — Multi-device session tracking
+// ─────────────────────────────────────────────
+
+model UserSession {
+  id           String   @id @default(uuid())
+  userId       String
+  refreshToken String   @unique
+  deviceInfo   String?  // browser / mobile / etc
+  ipAddress    String?
+  isActive     Boolean  @default(true)
+  expiresAt    DateTime
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user         UserAuth @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([refreshToken])
+  @@map("user_sessions")
+}
+
+// ─────────────────────────────────────────────
+// AUDIT LOG — Security event tracking
+// ─────────────────────────────────────────────
+
+model AuditLog {
+  id        String      @id @default(uuid())
+  userId    String
+  action    AuditAction
+  ipAddress String?
+  userAgent String?
+  metadata  Json?       // extra info per action
+  createdAt DateTime    @default(now())
+
+  user      UserAuth    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
 }

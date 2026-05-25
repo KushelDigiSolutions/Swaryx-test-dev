@@ -21,7 +21,12 @@ const SERVICES = {
   NOTIFICATION: process.env.NOTIFICATION_SERVICE_URL || "http://localhost:5004",
 };
 
+///////////////////////////////////////////////////////////
+// MIDDLEWARE
+///////////////////////////////////////////////////////////
+
 app.use(cors());
+app.use(express.json());
 
 ///////////////////////////////////////////////////////////
 // REQUEST LOGGER
@@ -61,7 +66,7 @@ const verifyToken = (req, res, next) => {
     req.headers["x-user-id"]   = decoded.userId;
     req.headers["x-user-role"] = decoded.role;
     next();
-  } catch (error) {
+  } catch {
     return res.status(401).json({ success: false, message: "Invalid or expired token" });
   }
 };
@@ -102,64 +107,23 @@ app.get("/health", (_req, res) => {
 app.get("/", (_req, res) => res.send("API Gateway Running..."));
 
 ///////////////////////////////////////////////////////////
-// 📝 REGISTER — Enriched Response
+// POST /api/auth/register
 //
-// 1. Auth Service mein register karo
-// 2. Token se userId, role nikalo
-// 3. User Service mein profile auto-create karo
-// 4. Enriched response bhejo
+// 1. Register user in Auth Service
+// 2. User Service profile is created automatically by Auth Service
+//    via internal call — no separate call needed here
+// 3. Return enriched response with tokens
 ///////////////////////////////////////////////////////////
 
-app.post("/api/auth/register", express.json(), async (req, res) => {
+app.post("/api/auth/register", async (req, res) => {
   try {
-    const { email, password, role, firstName, lastName } = req.body;
-
-    // Step 1: Auth Service mein register karo
     const authResponse = await axios.post(
       `${SERVICES.AUTH}/api/auth/register`,
-      { email, password, role },
+      req.body,
       { headers: { "Content-Type": "application/json" } }
     );
 
-    const { userId, accessToken, refreshToken } = authResponse.data.data;
-    const authHeader = { Authorization: `Bearer ${accessToken}` };
-
-    // Step 2: User Service mein profile create karo
-    let userProfile = null;
-    try {
-      const userRes = await axios.post(
-        `${SERVICES.USER}/api/user/user`,
-        {
-          authUserId:  userId,
-          email:       email,
-          firstName:   firstName || email.split("@")[0],
-          lastName:    lastName  || "",
-          role:        role      || "ORG_ADMIN",
-          // organizationId nahi dena — baad mein org create hogi
-        },
-        { headers: { ...authHeader, "Content-Type": "application/json" } }
-      );
-      userProfile = userRes.data?.user || null;
-      console.log("[GATEWAY] User profile created in User Service ✅");
-    } catch (userErr) {
-      // Profile creation fail ho toh registration mat roko
-      console.warn(
-        "[GATEWAY] User profile creation failed:",
-        userErr?.response?.data || userErr.message
-      );
-    }
-
-    return res.status(201).json({
-      success: true,
-      message: "User registered successfully",
-      data: {
-        userId,
-        accessToken,
-        refreshToken,
-        user: userProfile,
-      },
-    });
-
+    return res.status(authResponse.status).json(authResponse.data);
   } catch (error) {
     const status  = error?.response?.status  || 500;
     const message = error?.response?.data?.message || "Registration failed";
@@ -168,84 +132,51 @@ app.post("/api/auth/register", express.json(), async (req, res) => {
 });
 
 ///////////////////////////////////////////////////////////
-// 🔐 LOGIN — Enriched Response
+// POST /api/auth/login
 //
-// 1. Auth Service se login karo → accessToken lo
-// 2. Token decode karo → userId, role nikalo
-// 3. User Service se profile fetch karo (authUserId se)
-//    → nahi mila toh auto-create karo (purane users)
-// 4. Org + Subscription fetch karo
-// 5. Sab ek saath client ko bhejo
+// 1. Login via Auth Service → get tokens
+// 2. Decode token → get userId, role
+// 3. Fetch UserProfile from User Service
+// 4. Fetch Organization (if user belongs to one)
+// 5. Fetch Subscription + Plan limits (if org exists)
+// 6. Return all data in one enriched response
 ///////////////////////////////////////////////////////////
 
-app.post("/api/auth/login", express.json(), async (req, res) => {
+app.post("/api/auth/login", async (req, res) => {
   try {
-    // Step 1: Auth Service se login
+    // Step 1: Auth Service login
     const authResponse = await axios.post(
       `${SERVICES.AUTH}/api/auth/login`,
       req.body,
       { headers: { "Content-Type": "application/json" } }
     );
 
-    const { accessToken, refreshToken } = authResponse.data.data;
-
-    // Step 2: Token decode karo
-    const decoded = jwt.decode(accessToken);
-    const userId  = decoded?.userId;   // yeh authUserId hai User Service ke liye
-    const role    = decoded?.role;
-    const email   = decoded?.email;
-
+    const { accessToken, refreshToken, userId, role } = authResponse.data.data;
     const authHeader = { Authorization: `Bearer ${accessToken}` };
 
     let userProfile  = null;
     let organization = null;
     let subscription = null;
-    let plan         = null;
 
-    // Step 3: User profile fetch karo
-    // GET /api/user/profile → authUserId se dhundta hai (correct!)
+    // Step 2: Fetch UserProfile from User Service
     try {
       const userRes = await axios.get(
-        `${SERVICES.USER}/api/user/profile`,
+        `${SERVICES.USER}/api/users/profile/me`,
         { headers: authHeader }
       );
       userProfile = userRes.data?.data || null;
     } catch (userErr) {
-      console.warn(
-        "[GATEWAY] User profile fetch failed:",
-        userErr?.response?.data || userErr.message
-      );
-
-      // Purana user — User Service mein record nahi → auto-create karo
-      try {
-        const createRes = await axios.post(
-          `${SERVICES.USER}/api/user/user`,
-          {
-            authUserId: userId,
-            email:      email || "",
-            firstName:  email ? email.split("@")[0] : "",
-            lastName:   "",
-            role:       role || "AGENT",
-          },
-          { headers: { ...authHeader, "Content-Type": "application/json" } }
-        );
-        userProfile = createRes.data?.user || null;
-        console.log("[GATEWAY] User profile auto-created ✅");
-      } catch (createErr) {
-        console.warn(
-          "[GATEWAY] User profile auto-create failed:",
-          createErr?.response?.data || createErr.message
-        );
-      }
+      console.warn("[GATEWAY] UserProfile fetch failed:", userErr?.response?.data || userErr.message);
     }
 
-    // Step 4: Organization fetch karo (agar organizationId ho)
+    // Step 3: Fetch Organization + Subscription if user belongs to one
     const orgId = userProfile?.organizationId;
 
     if (orgId) {
+      // Fetch org details
       try {
         const orgRes = await axios.get(
-          `${SERVICES.USER}/api/user/organization/${orgId}`,
+          `${SERVICES.USER}/api/users/organizations/mine`,
           { headers: authHeader }
         );
         organization = orgRes.data?.data || null;
@@ -253,47 +184,34 @@ app.post("/api/auth/login", express.json(), async (req, res) => {
         console.warn("[GATEWAY] Organization fetch failed");
       }
 
-      // Step 5: Subscription fetch karo
+      // Fetch subscription + plan limits
       try {
         const subRes = await axios.get(
-          `${SERVICES.SUBSCRIPTION}/api/subscription/subscription/${orgId}`,
+          `${SERVICES.SUBSCRIPTION}/api/subscriptions/mine`,
           { headers: authHeader }
         );
-        subscription = subRes.data || null;
+        subscription = subRes.data?.data || null;
       } catch {
         console.warn("[GATEWAY] Subscription fetch failed");
       }
-
-      // Step 6: Plan limit details
-      try {
-        const planRes = await axios.get(
-          `${SERVICES.SUBSCRIPTION}/api/subscription/check-limit/${orgId}`,
-          { headers: authHeader }
-        );
-        plan = planRes.data || null;
-      } catch {
-        console.warn("[GATEWAY] Plan fetch failed");
-      }
     }
 
-    // Step 7: Enriched response
     return res.status(200).json({
       success: true,
       message: "Login successful",
       data: {
         accessToken,
         refreshToken,
+        mustChangePassword: authResponse.data.data?.mustChangePassword ?? false,
         user: {
+          ...userProfile,
           userId,
           role,
-          ...userProfile,
         },
         organization: organization || null,
         subscription: subscription || null,
-        plan:         plan         || null,
       },
     });
-
   } catch (error) {
     const status  = error?.response?.status  || 500;
     const message = error?.response?.data?.message || "Login failed";
@@ -302,64 +220,99 @@ app.post("/api/auth/login", express.json(), async (req, res) => {
 });
 
 ///////////////////////////////////////////////////////////
-// PUBLIC ROUTES — Auth (no token needed)
+// POST /api/users/organizations/:id/users/provision
+//
+// Provision a new user directly into an org (ORG_ADMIN only).
+// Gateway verifies the token and proxies to User Service.
+// Handled separately to ensure verifyToken runs first.
 ///////////////////////////////////////////////////////////
 
+app.post(
+  "/api/users/organizations/:id/users/provision",
+  verifyToken,
+  (req, res, next) => {
+    // Rebuild the URL with the captured param before proxying
+    req.url = `/api/users/organizations/${req.params.id}/users/provision`;
+    next();
+  },
+  createProxy(SERVICES.USER, (p) => p.includes("/users/provision"))
+);
+
+///////////////////////////////////////////////////////////
+// PUBLIC ROUTES — No token required
+///////////////////////////////////////////////////////////
+
+// Auth: token refresh, email verification, password reset
 app.use(
   createProxy(SERVICES.AUTH, [
     "/api/auth/refresh",
     "/api/auth/verify-email",
+    "/api/auth/forgot-password",
     "/api/auth/reset-password",
   ])
 );
 
-// Subscription plans (public)
+// Invitation accept (public — user clicks link from email)
 app.use(
-  createProxy(SERVICES.SUBSCRIPTION, ["/api/subscription/plans"])
+  createProxy(SERVICES.USER, (p) => {
+    return p.match(/^\/api\/users\/invitations\/[^/]+\/accept$/);
+  })
+);
+
+// Invitation details (public — to show invite info before login)
+app.use(
+  createProxy(SERVICES.USER, (p) => {
+    return p.match(/^\/api\/users\/invitations\/[^/]+$/) && !p.includes("/accept");
+  })
+);
+
+// Subscription plans (public — pricing page)
+app.use(
+  createProxy(SERVICES.SUBSCRIPTION, ["/api/subscriptions/plans"])
 );
 
 ///////////////////////////////////////////////////////////
-// PROTECTED ROUTES
+// PROTECTED ROUTES — Token required
 ///////////////////////////////////////////////////////////
 
-// Auth protected
+// ── Auth Service ─────────────────────────────────────────
 app.use(
   (req, res, next) => {
     if (req.url.startsWith("/api/auth")) return verifyToken(req, res, next);
     next();
   },
-  createProxy(SERVICES.AUTH, ["/api/auth/me", "/api/auth/logout"])
+  createProxy(SERVICES.AUTH, (p) => p.startsWith("/api/auth"))
 );
 
-// User Service
+// ── User Service ─────────────────────────────────────────
 app.use(
   (req, res, next) => {
-    if (req.url.startsWith("/api/user")) return verifyToken(req, res, next);
+    if (req.url.startsWith("/api/users")) return verifyToken(req, res, next);
     next();
   },
-  createProxy(SERVICES.USER, (p) => p.startsWith("/api/user"))
+  createProxy(SERVICES.USER, (p) => p.startsWith("/api/users"))
 );
 
-// Subscription Service
+// ── Subscription Service ─────────────────────────────────
 app.use(
   (req, res, next) => {
-    if (req.url.startsWith("/api/subscription")) return verifyToken(req, res, next);
+    if (req.url.startsWith("/api/subscriptions")) return verifyToken(req, res, next);
     next();
   },
-  createProxy(SERVICES.SUBSCRIPTION, (p) => p.startsWith("/api/subscription"))
+  createProxy(SERVICES.SUBSCRIPTION, (p) => p.startsWith("/api/subscriptions"))
 );
 
-// Notification Service
+// ── Notification Service ─────────────────────────────────
 app.use(
   (req, res, next) => {
-    if (req.url.startsWith("/api/notification")) return verifyToken(req, res, next);
+    if (req.url.startsWith("/api/notifications")) return verifyToken(req, res, next);
     next();
   },
-  createProxy(SERVICES.NOTIFICATION, (p) => p.startsWith("/api/notification"))
+  createProxy(SERVICES.NOTIFICATION, (p) => p.startsWith("/api/notifications"))
 );
 
 ///////////////////////////////////////////////////////////
-// 404 ROUTE
+// 404
 ///////////////////////////////////////////////////////////
 
 app.use((req, res) => {
@@ -373,7 +326,7 @@ app.use((req, res) => {
 // SERVER
 ///////////////////////////////////////////////////////////
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
   console.log(`\nAPI Gateway running on port ${PORT}`);
