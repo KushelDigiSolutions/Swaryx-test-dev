@@ -1,7 +1,0 @@
-services:
-  frontend:
-    build:
-      context: .
-    container_name: ai-calling-frontend
-    ports:
-      - "3000:3000"
