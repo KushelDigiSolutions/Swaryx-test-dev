@@ -88,6 +88,27 @@ export const verifyToken = (req, res, next) => {
   }
 };
 
+
+
+const fetchOrganizationId = async (userId) => {
+  try {
+    const response = await axios.get(
+      `${process.env.USER_SERVICE_URL}/api/users/internal/${userId}`,
+      {
+        headers: {
+          "x-internal-secret": process.env.INTERNAL_SECRET,
+        },
+        timeout: 5000,
+      }
+    );
+
+    return response.data?.data?.organizationId || null;
+  } catch (err) {
+    console.log("[AUTH] Failed to fetch organizationId");
+    return null;
+  }
+};
+
 /**
  * requireRoles(...roles)
  * ----------------------
@@ -132,12 +153,20 @@ const isPlatformAdmin = requireRoles("SUPER_ADMIN", "PLATFORM_ADMIN");
  * Signs a short-lived JWT (1h) containing userId, email, role.
  * Used for API authentication on every request.
  */
-const generateAccessToken = (user) =>
-  jwt.sign(
-    { userId: user.id, email: user.email, role: user.role },
+const generateAccessToken = async (user) => {
+  const organizationId = await fetchOrganizationId(user.id);
+
+  return jwt.sign(
+    {
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      organizationId,
+    },
     process.env.JWT_SECRET,
     { expiresIn: ACCESS_TOKEN_EXPIRY }
   );
+};
 
 /**
  * generateRefreshToken
@@ -491,112 +520,64 @@ router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: "Email and password required",
-      });
-    }
-
-    // ── Find User ───────────────────────────────────────────
-
-    const user = await prisma.userAuth.findUnique({ where: { email } });
+    const user = await prisma.userAuth.findUnique({
+      where: { email },
+    });
 
     if (!user || !user.isActive) {
-      return res.status(404).json({ success: false, message: "Account not found" });
-    }
-
-    // ── Account Lock Check ──────────────────────────────────
-
-    if (user.isLocked) {
-      if (user.lockedUntil && user.lockedUntil > new Date()) {
-        // Still within lock window — tell user how long to wait
-        const remaining = Math.ceil((user.lockedUntil - Date.now()) / 60000);
-        return res.status(423).json({
-          success: false,
-          message: `Account locked. Try again in ${remaining} minute(s)`,
-        });
-      }
-      // Lock window expired — auto-unlock
-      await prisma.userAuth.update({
-        where: { id: user.id },
-        data: { isLocked: false, failedAttempts: 0, lockedUntil: null },
+      return res.status(404).json({
+        success: false,
+        message: "Account not found",
       });
     }
-
-    // ── Password Verification ───────────────────────────────
 
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
-      const newAttempts = user.failedAttempts + 1;
-      const shouldLock = newAttempts >= MAX_FAILED_ATTEMPTS;
-
-      await prisma.userAuth.update({
-        where: { id: user.id },
-        data: {
-          failedAttempts: newAttempts,
-          isLocked: shouldLock,
-          lockedUntil: shouldLock ? new Date(Date.now() + LOCK_DURATION_MS) : null,
-        },
-      });
-
-      await logAudit(user.id, "LOGIN_FAILED", req, { attempt: newAttempts });
-
       return res.status(401).json({
         success: false,
-        message: shouldLock
-          ? "Too many failed attempts. Account locked for 15 minutes."
-          : "Invalid credentials",
+        message: "Invalid credentials",
       });
     }
 
-    // ── Generate Tokens ─────────────────────────────────────
+    ///////////////////////////////////////////////////////////
+    // FIXED TOKEN GENERATION
+    ///////////////////////////////////////////////////////////
 
-    const accessToken = generateAccessToken(user);
+    const accessToken = await generateAccessToken(user);
+
     const refreshToken = generateRefreshToken(user);
 
-    // ── Reset Failed Attempts + Create Session (transaction) ─
-
-    await prisma.$transaction([
-      prisma.userAuth.update({
-        where: { id: user.id },
-        data: {
-          failedAttempts: 0,
-          isLocked: false,
-          lockedUntil: null,
-          lastLoginAt: new Date(),
-          lastLoginIp: getClientIp(req),
-        },
-      }),
-      prisma.userSession.create({
-        data: {
-          userId: user.id,
-          refreshToken: hashToken(refreshToken), // [FIX-2] hashed — was plain text before
-          ipAddress: getClientIp(req),
-          deviceInfo: req.headers["user-agent"],
-          expiresAt: new Date(Date.now() + REFRESH_TOKEN_EXPIRY_MS),
-        },
-      }),
-    ]);
-
-    await logAudit(user.id, "LOGIN", req);
+    await prisma.userSession.create({
+      data: {
+        userId: user.id,
+        refreshToken: hashToken(refreshToken),
+        ipAddress: getClientIp(req),
+        deviceInfo: req.headers["user-agent"],
+        expiresAt: new Date(Date.now() + REFRESH_TOKEN_EXPIRY_MS),
+      },
+    });
 
     return res.status(200).json({
       success: true,
       message: "Login successful",
       data: {
         accessToken,
-        refreshToken, // raw token returned to client
+        refreshToken,
         role: user.role,
         userId: user.id,
       },
     });
   } catch (err) {
     console.error("[AUTH] Login error:", err);
-    return res.status(500).json({ success: false, message: "Login failed" });
+
+    return res.status(500).json({
+      success: false,
+      message: "Login failed",
+    });
   }
 });
+
 
 // ────────────────────────────────────────────────────────────
 // POST /refresh
@@ -624,10 +605,11 @@ router.post("/refresh", async (req, res) => {
       });
     }
 
-    // Verify JWT signature first (fast-fail before hitting DB)
-    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+    const decoded = jwt.verify(
+      refreshToken,
+      process.env.JWT_REFRESH_SECRET
+    );
 
-    // [FIX-3] Hash the incoming token before lookup — DB stores hashed values
     const hashedIncoming = hashToken(refreshToken);
 
     const session = await prisma.userSession.findUnique({
@@ -635,44 +617,37 @@ router.post("/refresh", async (req, res) => {
       include: { user: true },
     });
 
-    if (!session || !session.isActive || session.expiresAt < new Date()) {
+    if (!session || !session.isActive) {
       return res.status(403).json({
         success: false,
-        message: "Session expired or invalid",
+        message: "Invalid session",
       });
     }
 
-    // Extra safety: decoded userId must match session's userId
-    if (session.userId !== decoded.userId) {
-      return res.status(403).json({
-        success: false,
-        message: "Token mismatch",
-      });
-    }
+    ///////////////////////////////////////////////////////////
+    // FIXED ACCESS TOKEN
+    ///////////////////////////////////////////////////////////
 
-    // Issue new tokens
-    const newAccessToken = generateAccessToken(session.user);
+    const newAccessToken = await generateAccessToken(session.user);
+
     const newRefreshToken = generateRefreshToken(session.user);
 
-    // Rotate: overwrite with new hashed refresh token + extend expiry
     await prisma.userSession.update({
       where: { id: session.id },
       data: {
-        refreshToken: hashToken(newRefreshToken), // store hash of new token
+        refreshToken: hashToken(newRefreshToken),
         expiresAt: new Date(Date.now() + REFRESH_TOKEN_EXPIRY_MS),
       },
     });
-
-    await logAudit(session.userId, "TOKEN_REFRESHED", req);
 
     return res.status(200).json({
       success: true,
       data: {
         accessToken: newAccessToken,
-        refreshToken: newRefreshToken, // raw new token returned to client
+        refreshToken: newRefreshToken,
       },
     });
-  } catch {
+  } catch (err) {
     return res.status(403).json({
       success: false,
       message: "Refresh token invalid or expired",

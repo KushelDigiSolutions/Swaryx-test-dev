@@ -59,6 +59,7 @@ const verifyToken = (req, res, next) => {
     const token = req.headers.authorization?.split(" ")[1];
     if (!token) return res.status(401).json({ success: false, message: "Token required" });
     req.user = jwt.verify(token, process.env.JWT_SECRET);
+    console.log(req.user)
     next();
   } catch {
     return res.status(401).json({ success: false, message: "Invalid or expired token" });
@@ -199,22 +200,41 @@ router.get("/plans/:tier", async (req, res) => {
 // ─────────────────────────────────────────────
 // SUBSCRIPTION ROUTES
 // ─────────────────────────────────────────────
+const validateOrganization = (req, res) => {
+  if (!req.user?.organizationId) {
+    res.status(400).json({
+      success: false,
+      message: "Organization ID missing in token",
+    });
+
+    return false;
+  }
+
+  return true;
+};
+
 
 // GET /subscriptions/mine
 router.get("/subscriptions/mine", verifyToken, async (req, res) => {
   try {
+
+    if (!validateOrganization(req, res)) return;
+
     const subscription = await prisma.subscription.findUnique({
       where: { organizationId: req.user.organizationId },
       include: { plan: true },
     });
 
-    if (!subscription) {
-      return res.status(404).json({ success: false, message: "No subscription found" });
-    }
+    return res.status(200).json({
+      success: true,
+      data: subscription,
+    });
 
-    return res.status(200).json({ success: true, data: subscription });
   } catch (err) {
-    return res.status(500).json({ success: false, message: "Failed to fetch subscription" });
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch subscription",
+    });
   }
 });
 
@@ -223,6 +243,7 @@ router.get("/subscriptions/mine", verifyToken, async (req, res) => {
 router.post("/subscriptions/upgrade", verifyToken, isOrgAdmin, async (req, res) => {
   try {
     const { planTier, billingCycle } = req.body;
+    console.log("USER => ", req.user);
 
     const plan = await prisma.plan.findUnique({ where: { tier: planTier } });
     if (!plan) return res.status(404).json({ success: false, message: "Plan not found" });

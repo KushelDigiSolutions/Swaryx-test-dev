@@ -1,0 +1,1346 @@
+{
+  "info": {
+    "_postman_id": "saas-crm-collection-v1",
+    "name": "🏢 SaaS CRM — Complete API Collection 2",
+    "description": "Complete API collection for all 6 microservices:\n1. Auth Service (port 5001)\n2. User Service (port 5002)\n3. Notification Service (port 5003)\n4. Subscription Service (port 5004)\n5. Lead Service (port 5005)\n6. Calling Service (port 5006)\n\n**Setup:**\nSet these collection variables before testing:\n- `AUTH_URL` = http://localhost:5001/api/auth\n- `USER_URL` = http://localhost:5002/api/users\n- `NOTIFY_URL` = http://localhost:5003/api/notifications\n- `SUB_URL` = http://localhost:5004/api/subscriptions\n- `LEAD_URL` = http://localhost:5005/api/leads\n- `CALL_URL` = http://localhost:5006/api/calls\n- `INTERNAL_SECRET` = my_internal_service_secret_789\n\nRun **Register** first → tokens auto-save via Tests script.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "AUTH_URL",        "value": "http://localhost:5000/api/auth" },
+    { "key": "USER_URL",        "value": "http://localhost:5000/api/users" },
+    { "key": "NOTIFY_URL",      "value": "http://localhost:5000/api/notifications" },
+    { "key": "SUB_URL",         "value": "http://localhost:5000/api/subscriptions" },
+    { "key": "LEAD_URL",        "value": "http://localhost:5005/api/leads" },
+    { "key": "CALL_URL",        "value": "http://localhost:5006/api/calls" },
+    { "key": "INTERNAL_SECRET", "value": "my_internal_service_secret_789" },
+    { "key": "ACCESS_TOKEN",    "value": "" },
+    { "key": "REFRESH_TOKEN",   "value": "" },
+    { "key": "USER_ID",         "value": "" },
+    { "key": "ORG_ID",          "value": "" },
+    { "key": "LEAD_ID",         "value": "" },
+    { "key": "CALL_ID",         "value": "" },
+    { "key": "INVITE_TOKEN",    "value": "" },
+    { "key": "SESSION_ID",      "value": "" },
+    { "key": "SCRIPT_ID",       "value": "" }
+  ],
+  "item": [
+
+    {
+      "name": "🔐 Auth Service",
+      "item": [
+
+        {
+          "name": "Register",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "if (pm.response.code === 201) {",
+            "  const d = pm.response.json().data;",
+            "  pm.collectionVariables.set('ACCESS_TOKEN', d.accessToken);",
+            "  pm.collectionVariables.set('REFRESH_TOKEN', d.refreshToken);",
+            "  pm.collectionVariables.set('USER_ID', d.userId);",
+            "  pm.test('Register successful', () => pm.response.to.have.status(201));",
+            "}"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{AUTH_URL}}/register", "host": ["{{AUTH_URL}}"], "path": ["register"] },
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"orgadmin@example.com\",\n  \"password\": \"Admin@1234\",\n  \"firstName\": \"Rahul\",\n  \"lastName\": \"Sharma\",\n  \"role\": \"ORG_ADMIN\"\n}" }
+          }
+        },
+
+        {
+          "name": "Login",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "if (pm.response.code === 200) {",
+            "  const d = pm.response.json().data;",
+            "  pm.collectionVariables.set('ACCESS_TOKEN', d.accessToken);",
+            "  pm.collectionVariables.set('REFRESH_TOKEN', d.refreshToken);",
+            "  pm.collectionVariables.set('USER_ID', d.userId);",
+            "  pm.test('Login successful', () => pm.response.to.have.status(200));",
+            "}"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{AUTH_URL}}/login", "host": ["{{AUTH_URL}}"], "path": ["login"] },
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"orgadmin@example.com\",\n  \"password\": \"Admin@1234\"\n}" }
+          }
+        },
+
+        {
+          "name": "Refresh Token",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "if (pm.response.code === 200) {",
+            "  const d = pm.response.json().data;",
+            "  pm.collectionVariables.set('ACCESS_TOKEN', d.accessToken);",
+            "  pm.collectionVariables.set('REFRESH_TOKEN', d.refreshToken);",
+            "}"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{AUTH_URL}}/refresh", "host": ["{{AUTH_URL}}"], "path": ["refresh"] },
+            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{REFRESH_TOKEN}}\"\n}" }
+          }
+        },
+
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+            ],
+            "url": { "raw": "{{AUTH_URL}}/logout", "host": ["{{AUTH_URL}}"], "path": ["logout"] },
+            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{REFRESH_TOKEN}}\"\n}" }
+          }
+        },
+
+        {
+          "name": "Get Current User (/me)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{AUTH_URL}}/me", "host": ["{{AUTH_URL}}"], "path": ["me"] }
+          }
+        },
+
+        {
+          "name": "Verify Email",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{AUTH_URL}}/verify-email", "host": ["{{AUTH_URL}}"], "path": ["verify-email"] },
+            "body": { "mode": "raw", "raw": "{\n  \"token\": \"PASTE_TOKEN_FROM_EMAIL_HERE\"\n}" }
+          }
+        },
+
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{AUTH_URL}}/forgot-password", "host": ["{{AUTH_URL}}"], "path": ["forgot-password"] },
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"orgadmin@example.com\"\n}" }
+          }
+        },
+
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{AUTH_URL}}/reset-password", "host": ["{{AUTH_URL}}"], "path": ["reset-password"] },
+            "body": { "mode": "raw", "raw": "{\n  \"token\": \"PASTE_RESET_TOKEN_HERE\",\n  \"newPassword\": \"NewPass@5678\"\n}" }
+          }
+        },
+
+        {
+          "name": "Get Active Sessions",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "if (pm.response.code === 200) {",
+            "  const sessions = pm.response.json().data;",
+            "  if (sessions.length > 0) pm.collectionVariables.set('SESSION_ID', sessions[0].id);",
+            "}"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{AUTH_URL}}/sessions", "host": ["{{AUTH_URL}}"], "path": ["sessions"] }
+          }
+        },
+
+        {
+          "name": "Revoke Session",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{AUTH_URL}}/sessions/{{SESSION_ID}}", "host": ["{{AUTH_URL}}"], "path": ["sessions", "{{SESSION_ID}}"] }
+          }
+        },
+
+        {
+          "name": "Admin — Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{AUTH_URL}}/admin/users/USER_PROFILE_ID_HERE", "host": ["{{AUTH_URL}}"], "path": ["admin", "users", "USER_PROFILE_ID_HERE"] }
+          }
+        },
+
+        {
+          "name": "Internal — Verify Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-internal-secret", "value": "{{INTERNAL_SECRET}}" }
+            ],
+            "url": { "raw": "{{AUTH_URL}}/internal/verify-token", "host": ["{{AUTH_URL}}"], "path": ["internal", "verify-token"] },
+            "body": { "mode": "raw", "raw": "{\n  \"token\": \"{{ACCESS_TOKEN}}\"\n}" }
+          }
+        },
+
+        {
+          "name": "Internal — Provision User",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-internal-secret", "value": "{{INTERNAL_SECRET}}" }
+            ],
+            "url": { "raw": "{{AUTH_URL}}/internal/provision", "host": ["{{AUTH_URL}}"], "path": ["internal", "provision"] },
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"agent@example.com\",\n  \"password\": \"Agent@1234\",\n  \"role\": \"ORG_USER\",\n  \"firstName\": \"Priya\",\n  \"lastName\": \"Singh\",\n  \"mustChangePassword\": true\n}" }
+          }
+        }
+
+      ]
+    },
+
+    {
+      "name": "👤 User Service",
+      "item": [
+
+        {
+          "name": "Get My Profile",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{USER_URL}}/profile/me", "host": ["{{USER_URL}}"], "path": ["profile", "me"] }
+          }
+        },
+
+        {
+          "name": "Update My Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+            ],
+            "url": { "raw": "{{USER_URL}}/profile/me", "host": ["{{USER_URL}}"], "path": ["profile", "me"] },
+            "body": { "mode": "raw", "raw": "{\n  \"firstName\": \"Rahul\",\n  \"lastName\": \"Sharma\",\n  \"phone\": \"+919876543210\",\n  \"timezone\": \"Asia/Kolkata\"\n}" }
+          }
+        },
+
+        {
+          "name": "Admin — Get Any Profile",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{USER_URL}}/profile/USER_PROFILE_ID_HERE", "host": ["{{USER_URL}}"], "path": ["profile", "USER_PROFILE_ID_HERE"] }
+          }
+        },
+
+        {
+          "name": "Create Organization",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "if (pm.response.code === 201) {",
+            "  pm.collectionVariables.set('ORG_ID', pm.response.json().data.id);",
+            "  pm.test('Org created', () => pm.response.to.have.status(201));",
+            "}"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+            ],
+            "url": { "raw": "{{USER_URL}}/organizations", "host": ["{{USER_URL}}"], "path": ["organizations"] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Skyline Realty Pvt Ltd\",\n  \"description\": \"Premium real estate in Mumbai\",\n  \"industry\": \"Real Estate\",\n  \"size\": \"11-50\",\n  \"billingEmail\": \"billing@skyline.com\",\n  \"website\": \"https://skyline.com\"\n}" }
+          }
+        },
+
+        {
+          "name": "Get My Organization",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{USER_URL}}/organizations/mine", "host": ["{{USER_URL}}"], "path": ["organizations", "mine"] }
+          }
+        },
+
+        {
+          "name": "Update Organization",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+            ],
+            "url": { "raw": "{{USER_URL}}/organizations/{{ORG_ID}}", "host": ["{{USER_URL}}"], "path": ["organizations", "{{ORG_ID}}"] },
+            "body": { "mode": "raw", "raw": "{\n  \"description\": \"Updated description\",\n  \"website\": \"https://skylinerealty.in\"\n}" }
+          }
+        },
+
+        {
+          "name": "List Org Members",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{USER_URL}}/organizations/{{ORG_ID}}/members", "host": ["{{USER_URL}}"], "path": ["organizations", "{{ORG_ID}}", "members"] }
+          }
+        },
+
+        {
+          "name": "Remove Org Member",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{USER_URL}}/organizations/{{ORG_ID}}/members/MEMBER_USER_PROFILE_ID", "host": ["{{USER_URL}}"], "path": ["organizations", "{{ORG_ID}}", "members", "MEMBER_USER_PROFILE_ID"] }
+          }
+        },
+
+        {
+          "name": "Direct Add Member to Org",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+            ],
+            "url": { "raw": "{{USER_URL}}/organizations/{{ORG_ID}}/members/add", "host": ["{{USER_URL}}"], "path": ["organizations", "{{ORG_ID}}", "members", "add"] },
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"existinguser@example.com\",\n  \"role\": \"ORG_USER\"\n}" }
+          }
+        },
+
+        {
+          "name": "Bulk Invite Members",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+            ],
+            "url": { "raw": "{{USER_URL}}/organizations/{{ORG_ID}}/members/bulk-invite", "host": ["{{USER_URL}}"], "path": ["organizations", "{{ORG_ID}}", "members", "bulk-invite"] },
+            "body": { "mode": "raw", "raw": "{\n  \"invites\": [\n    { \"email\": \"agent1@example.com\", \"role\": \"ORG_USER\" },\n    { \"email\": \"agent2@example.com\", \"role\": \"ORG_USER\" },\n    { \"email\": \"manager@example.com\", \"role\": \"ORG_MANAGER\" }\n  ]\n}" }
+          }
+        },
+
+        {
+          "name": "Provision User into Org",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+            ],
+            "url": { "raw": "{{USER_URL}}/organizations/{{ORG_ID}}/users/provision", "host": ["{{USER_URL}}"], "path": ["organizations", "{{ORG_ID}}", "users", "provision"] },
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"newagent@example.com\",\n  \"firstName\": \"Amit\",\n  \"lastName\": \"Kumar\",\n  \"role\": \"ORG_USER\",\n  \"phone\": \"+919876500001\"\n}" }
+          }
+        },
+
+        {
+          "name": "Send Single Invitation",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "if (pm.response.code === 201) {",
+            "  pm.collectionVariables.set('INVITE_TOKEN', pm.response.json().data.token);",
+            "}"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+            ],
+            "url": { "raw": "{{USER_URL}}/invitations", "host": ["{{USER_URL}}"], "path": ["invitations"] },
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"invite@example.com\",\n  \"role\": \"ORG_USER\"\n}" }
+          }
+        },
+
+        {
+          "name": "Get Invitation Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{USER_URL}}/invitations/{{INVITE_TOKEN}}", "host": ["{{USER_URL}}"], "path": ["invitations", "{{INVITE_TOKEN}}"] }
+          }
+        },
+
+        {
+          "name": "Accept Invitation",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{USER_URL}}/invitations/{{INVITE_TOKEN}}/accept", "host": ["{{USER_URL}}"], "path": ["invitations", "{{INVITE_TOKEN}}", "accept"] }
+          }
+        },
+
+        {
+          "name": "Revoke Invitation",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{USER_URL}}/invitations/INVITE_ID_HERE", "host": ["{{USER_URL}}"], "path": ["invitations", "INVITE_ID_HERE"] }
+          }
+        },
+
+        {
+          "name": "Admin — List All Users",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": {
+              "raw": "{{USER_URL}}/admin/users?page=1&limit=20&search=",
+              "host": ["{{USER_URL}}"], "path": ["admin", "users"],
+              "query": [
+                { "key": "page",   "value": "1" },
+                { "key": "limit",  "value": "20" },
+                { "key": "search", "value": "" },
+                { "key": "role",   "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+
+        {
+          "name": "Admin — List All Organizations",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": {
+              "raw": "{{USER_URL}}/admin/organizations?page=1&limit=20",
+              "host": ["{{USER_URL}}"], "path": ["admin", "organizations"],
+              "query": [
+                { "key": "page",   "value": "1" },
+                { "key": "limit",  "value": "20" },
+                { "key": "search", "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+
+        {
+          "name": "Admin — Change User Role",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+            ],
+            "url": { "raw": "{{USER_URL}}/admin/users/USER_PROFILE_ID_HERE/role", "host": ["{{USER_URL}}"], "path": ["admin", "users", "USER_PROFILE_ID_HERE", "role"] },
+            "body": { "mode": "raw", "raw": "{\n  \"role\": \"ORG_MANAGER\"\n}" }
+          }
+        },
+
+        {
+          "name": "Admin — Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{USER_URL}}/admin/users/USER_PROFILE_ID_HERE", "host": ["{{USER_URL}}"], "path": ["admin", "users", "USER_PROFILE_ID_HERE"] }
+          }
+        },
+
+        {
+          "name": "Internal — Create Profile",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-internal-secret", "value": "{{INTERNAL_SECRET}}" }
+            ],
+            "url": { "raw": "{{USER_URL}}/internal/create", "host": ["{{USER_URL}}"], "path": ["internal", "create"] },
+            "body": { "mode": "raw", "raw": "{\n  \"authUserId\": \"auth-user-id-here\",\n  \"email\": \"user@example.com\",\n  \"role\": \"ORG_USER\",\n  \"firstName\": \"Test\",\n  \"lastName\": \"User\"\n}" }
+          }
+        },
+
+        {
+          "name": "Internal — Get Profile by AuthUserId",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "x-internal-secret", "value": "{{INTERNAL_SECRET}}" }],
+            "url": { "raw": "{{USER_URL}}/internal/AUTH_USER_ID_HERE", "host": ["{{USER_URL}}"], "path": ["internal", "AUTH_USER_ID_HERE"] }
+          }
+        }
+
+      ]
+    },
+
+    {
+      "name": "🔔 Notification Service",
+      "item": [
+
+        {
+          "name": "Get My Notifications",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": {
+              "raw": "{{NOTIFY_URL}}/notifications?page=1&limit=20&unreadOnly=false",
+              "host": ["{{NOTIFY_URL}}"], "path": ["notifications"],
+              "query": [
+                { "key": "page",       "value": "1" },
+                { "key": "limit",      "value": "20" },
+                { "key": "unreadOnly", "value": "false" }
+              ]
+            }
+          }
+        },
+
+        {
+          "name": "Mark One as Read",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{NOTIFY_URL}}/notifications/NOTIFICATION_ID_HERE/read", "host": ["{{NOTIFY_URL}}"], "path": ["notifications", "NOTIFICATION_ID_HERE", "read"] }
+          }
+        },
+
+        {
+          "name": "Mark All as Read",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{NOTIFY_URL}}/notifications/read-all", "host": ["{{NOTIFY_URL}}"], "path": ["notifications", "read-all"] }
+          }
+        },
+
+        {
+          "name": "Delete Notification",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{NOTIFY_URL}}/notifications/NOTIFICATION_ID_HERE", "host": ["{{NOTIFY_URL}}"], "path": ["notifications", "NOTIFICATION_ID_HERE"] }
+          }
+        },
+
+        {
+          "name": "Get My Preferences",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{NOTIFY_URL}}/preferences", "host": ["{{NOTIFY_URL}}"], "path": ["preferences"] }
+          }
+        },
+
+        {
+          "name": "Update Preferences",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+            ],
+            "url": { "raw": "{{NOTIFY_URL}}/preferences", "host": ["{{NOTIFY_URL}}"], "path": ["preferences"] },
+            "body": { "mode": "raw", "raw": "{\n  \"emailEnabled\": true,\n  \"smsEnabled\": false,\n  \"pushEnabled\": true,\n  \"inAppEnabled\": true\n}" }
+          }
+        },
+
+        {
+          "name": "Admin — List Templates",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{NOTIFY_URL}}/admin/templates", "host": ["{{NOTIFY_URL}}"], "path": ["admin", "templates"] }
+          }
+        },
+
+        {
+          "name": "Admin — Create Template",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+            ],
+            "url": { "raw": "{{NOTIFY_URL}}/admin/templates", "host": ["{{NOTIFY_URL}}"], "path": ["admin", "templates"] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"welcome_email_v2\",\n  \"type\": \"WELCOME\",\n  \"subject\": \"Welcome to {{platform_name}}!\",\n  \"body\": \"Hi {{firstName}}, welcome aboard.\",\n  \"htmlBody\": \"<h1>Welcome {{firstName}}!</h1><p>Verify: <a href='{{verifyLink}}'>here</a></p>\"\n}" }
+          }
+        },
+
+        {
+          "name": "Admin — Update Template",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+            ],
+            "url": { "raw": "{{NOTIFY_URL}}/admin/templates/TEMPLATE_ID_HERE", "host": ["{{NOTIFY_URL}}"], "path": ["admin", "templates", "TEMPLATE_ID_HERE"] },
+            "body": { "mode": "raw", "raw": "{\n  \"subject\": \"Updated subject line\",\n  \"isActive\": true\n}" }
+          }
+        },
+
+        {
+          "name": "Admin — Broadcast",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+            ],
+            "url": { "raw": "{{NOTIFY_URL}}/admin/broadcast", "host": ["{{NOTIFY_URL}}"], "path": ["admin", "broadcast"] },
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Platform Maintenance\",\n  \"body\": \"We will be down for 30 minutes on Sunday 2 AM IST.\",\n  \"link\": \"/announcements\",\n  \"targetRoles\": [\"ORG_ADMIN\", \"ORG_USER\"]\n}" }
+          }
+        },
+
+        {
+          "name": "Internal — Send Welcome",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-internal-secret", "value": "{{INTERNAL_SECRET}}" }
+            ],
+            "url": { "raw": "{{NOTIFY_URL}}/internal/welcome", "host": ["{{NOTIFY_URL}}"], "path": ["internal", "welcome"] },
+            "body": { "mode": "raw", "raw": "{\n  \"userId\": \"auth-user-id-here\",\n  \"email\": \"user@example.com\",\n  \"role\": \"ORG_ADMIN\",\n  \"firstName\": \"Rahul\",\n  \"verificationToken\": \"raw-token-here\"\n}" }
+          }
+        },
+
+        {
+          "name": "Internal — Reset Password Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-internal-secret", "value": "{{INTERNAL_SECRET}}" }
+            ],
+            "url": { "raw": "{{NOTIFY_URL}}/internal/reset-password", "host": ["{{NOTIFY_URL}}"], "path": ["internal", "reset-password"] },
+            "body": { "mode": "raw", "raw": "{\n  \"userId\": \"auth-user-id-here\",\n  \"email\": \"user@example.com\",\n  \"resetToken\": \"raw-reset-token-here\"\n}" }
+          }
+        },
+
+        {
+          "name": "Internal — Send Invite Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-internal-secret", "value": "{{INTERNAL_SECRET}}" }
+            ],
+            "url": { "raw": "{{NOTIFY_URL}}/internal/invite", "host": ["{{NOTIFY_URL}}"], "path": ["internal", "invite"] },
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"invitee@example.com\",\n  \"inviteToken\": \"invite-token-here\",\n  \"organizationId\": \"{{ORG_ID}}\",\n  \"organizationName\": \"Skyline Realty\"\n}" }
+          }
+        },
+
+        {
+          "name": "Internal — Account Deleted Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-internal-secret", "value": "{{INTERNAL_SECRET}}" }
+            ],
+            "url": { "raw": "{{NOTIFY_URL}}/internal/account-deleted", "host": ["{{NOTIFY_URL}}"], "path": ["internal", "account-deleted"] },
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"deleted@example.com\",\n  \"firstName\": \"Rahul\",\n  \"deletedBy\": \"admin-user-id\"\n}" }
+          }
+        },
+
+        {
+          "name": "Internal — Generic Send",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-internal-secret", "value": "{{INTERNAL_SECRET}}" }
+            ],
+            "url": { "raw": "{{NOTIFY_URL}}/internal/send", "host": ["{{NOTIFY_URL}}"], "path": ["internal", "send"] },
+            "body": { "mode": "raw", "raw": "{\n  \"userId\": \"auth-user-id\",\n  \"title\": \"Test Notification\",\n  \"body\": \"This is a test in-app notification.\",\n  \"type\": \"IN_APP\",\n  \"priority\": \"NORMAL\"\n}" }
+          }
+        }
+
+      ]
+    },
+
+    {
+      "name": "💳 Subscription Service",
+      "item": [
+
+        {
+          "name": "List Plans",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{SUB_URL}}/plans", "host": ["{{SUB_URL}}"], "path": ["plans"] }
+          }
+        },
+
+        {
+          "name": "Get Plan by Tier",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{SUB_URL}}/plans/FREE", "host": ["{{SUB_URL}}"], "path": ["plans", "FREE"] }
+          }
+        },
+
+        {
+          "name": "Get My Subscription",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{SUB_URL}}/subscriptions/mine", "host": ["{{SUB_URL}}"], "path": ["subscriptions", "mine"] }
+          }
+        },
+
+        {
+          "name": "Upgrade Plan",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+            ],
+            "url": { "raw": "{{SUB_URL}}/subscriptions/upgrade", "host": ["{{SUB_URL}}"], "path": ["subscriptions", "upgrade"] },
+            "body": { "mode": "raw", "raw": "{\n  \"planTier\": \"STARTER\",\n  \"billingCycle\": \"MONTHLY\"\n}" }
+          }
+        },
+
+        {
+          "name": "Cancel Subscription",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+            ],
+            "url": { "raw": "{{SUB_URL}}/subscriptions/cancel", "host": ["{{SUB_URL}}"], "path": ["subscriptions", "cancel"] },
+            "body": { "mode": "raw", "raw": "{\n  \"immediately\": false\n}" }
+          }
+        },
+
+        {
+          "name": "Resume Subscription",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{SUB_URL}}/subscriptions/resume", "host": ["{{SUB_URL}}"], "path": ["subscriptions", "resume"] }
+          }
+        },
+
+        {
+          "name": "Switch Billing Cycle",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+            ],
+            "url": { "raw": "{{SUB_URL}}/subscriptions/billing-cycle", "host": ["{{SUB_URL}}"], "path": ["subscriptions", "billing-cycle"] },
+            "body": { "mode": "raw", "raw": "{\n  \"billingCycle\": \"YEARLY\"\n}" }
+          }
+        },
+
+        {
+          "name": "Get My Invoices",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": {
+              "raw": "{{SUB_URL}}/invoices?page=1&limit=10",
+              "host": ["{{SUB_URL}}"], "path": ["invoices"],
+              "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "10" }]
+            }
+          }
+        },
+
+        {
+          "name": "Get Single Invoice",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{SUB_URL}}/invoices/INVOICE_ID_HERE", "host": ["{{SUB_URL}}"], "path": ["invoices", "INVOICE_ID_HERE"] }
+          }
+        },
+
+        {
+          "name": "Get Current Usage",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{SUB_URL}}/usage/current", "host": ["{{SUB_URL}}"], "path": ["usage", "current"] }
+          }
+        },
+
+        {
+          "name": "Admin — List All Subscriptions",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": {
+              "raw": "{{SUB_URL}}/admin/subscriptions?page=1&limit=20",
+              "host": ["{{SUB_URL}}"], "path": ["admin", "subscriptions"],
+              "query": [
+                { "key": "page",   "value": "1" },
+                { "key": "limit",  "value": "20" },
+                { "key": "status", "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+
+        {
+          "name": "Admin — Force Change Plan",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+            ],
+            "url": { "raw": "{{SUB_URL}}/admin/subscriptions/SUBSCRIPTION_ID_HERE/plan", "host": ["{{SUB_URL}}"], "path": ["admin", "subscriptions", "SUBSCRIPTION_ID_HERE", "plan"] },
+            "body": { "mode": "raw", "raw": "{\n  \"planTier\": \"GROWTH\"\n}" }
+          }
+        },
+
+        {
+          "name": "Admin — Revenue Summary",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{SUB_URL}}/admin/revenue", "host": ["{{SUB_URL}}"], "path": ["admin", "revenue"] }
+          }
+        },
+
+        {
+          "name": "Internal — Initialize Subscription",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-internal-secret", "value": "{{INTERNAL_SECRET}}" }
+            ],
+            "url": { "raw": "{{SUB_URL}}/internal/initialize", "host": ["{{SUB_URL}}"], "path": ["internal", "initialize"] },
+            "body": { "mode": "raw", "raw": "{\n  \"organizationId\": \"{{ORG_ID}}\",\n  \"plan\": \"FREE\"\n}" }
+          }
+        },
+
+        {
+          "name": "Internal — Log Usage",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-internal-secret", "value": "{{INTERNAL_SECRET}}" }
+            ],
+            "url": { "raw": "{{SUB_URL}}/internal/usage", "host": ["{{SUB_URL}}"], "path": ["internal", "usage"] },
+            "body": { "mode": "raw", "raw": "{\n  \"organizationId\": \"{{ORG_ID}}\",\n  \"metric\": \"api_calls\",\n  \"quantity\": 1\n}" }
+          }
+        },
+
+        {
+          "name": "Internal — Get Plan & Limits",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "x-internal-secret", "value": "{{INTERNAL_SECRET}}" }],
+            "url": { "raw": "{{SUB_URL}}/internal/{{ORG_ID}}", "host": ["{{SUB_URL}}"], "path": ["internal", "{{ORG_ID}}"] }
+          }
+        }
+
+      ]
+    },
+
+    {
+      "name": "📋 Lead Service",
+      "item": [
+
+        {
+          "name": "Create Lead (Manual)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "if (pm.response.code === 201) {",
+            "  pm.collectionVariables.set('LEAD_ID', pm.response.json().data.id);",
+            "  pm.test('Lead created', () => pm.response.to.have.status(201));",
+            "}"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+            ],
+            "url": { "raw": "{{LEAD_URL}}/leads", "host": ["{{LEAD_URL}}"], "path": ["leads"] },
+            "body": { "mode": "raw", "raw": "{\n  \"firstName\": \"Vikram\",\n  \"lastName\": \"Mehta\",\n  \"phone\": \"+919876543000\",\n  \"email\": \"vikram@gmail.com\",\n  \"source\": \"MANUAL\",\n  \"propertyType\": \"APARTMENT\",\n  \"budgetMin\": 5000000,\n  \"budgetMax\": 8000000,\n  \"preferredLocation\": \"Bandra, Mumbai\",\n  \"bhkPreference\": \"2BHK\",\n  \"readyToMove\": true\n}" }
+          }
+        },
+
+        {
+          "name": "List Leads (Paginated + Filters)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": {
+              "raw": "{{LEAD_URL}}/leads?page=1&limit=20",
+              "host": ["{{LEAD_URL}}"], "path": ["leads"],
+              "query": [
+                { "key": "page",         "value": "1" },
+                { "key": "limit",        "value": "20" },
+                { "key": "status",       "value": "", "disabled": true },
+                { "key": "temperature",  "value": "", "disabled": true },
+                { "key": "source",       "value": "", "disabled": true },
+                { "key": "assignedToMe", "value": "", "disabled": true },
+                { "key": "search",       "value": "", "disabled": true },
+                { "key": "stage",        "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+
+        {
+          "name": "Get Lead by ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{LEAD_URL}}/leads/{{LEAD_ID}}", "host": ["{{LEAD_URL}}"], "path": ["leads", "{{LEAD_ID}}"] }
+          }
+        },
+
+        {
+          "name": "Update Lead",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+            ],
+            "url": { "raw": "{{LEAD_URL}}/leads/{{LEAD_ID}}", "host": ["{{LEAD_URL}}"], "path": ["leads", "{{LEAD_ID}}"] },
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"CONTACTED\",\n  \"temperature\": \"WARM\",\n  \"pipelineStage\": \"CONTACTED\",\n  \"budgetMax\": 9000000\n}" }
+          }
+        },
+
+        {
+          "name": "Delete Lead (Soft)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{LEAD_URL}}/leads/{{LEAD_ID}}", "host": ["{{LEAD_URL}}"], "path": ["leads", "{{LEAD_ID}}"] }
+          }
+        },
+
+        {
+          "name": "Assign Lead to Agent",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+            ],
+            "url": { "raw": "{{LEAD_URL}}/leads/{{LEAD_ID}}/assign", "host": ["{{LEAD_URL}}"], "path": ["leads", "{{LEAD_ID}}", "assign"] },
+            "body": { "mode": "raw", "raw": "{\n  \"assignedToId\": \"AGENT_AUTH_USER_ID_HERE\"\n}" }
+          }
+        },
+
+        {
+          "name": "Bulk CSV Import",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{LEAD_URL}}/leads/import/csv", "host": ["{{LEAD_URL}}"], "path": ["leads", "import", "csv"] },
+            "body": {
+              "mode": "formdata",
+              "formdata": [{ "key": "file", "type": "file", "src": "/path/to/leads.csv", "description": "CSV with columns: firstName,lastName,phone,email,source,propertyType,budgetMin,budgetMax,preferredLocation" }]
+            }
+          }
+        },
+
+        {
+          "name": "Get Import Job Status",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{LEAD_URL}}/leads/import/IMPORT_JOB_ID_HERE", "host": ["{{LEAD_URL}}"], "path": ["leads", "import", "IMPORT_JOB_ID_HERE"] }
+          }
+        },
+
+        {
+          "name": "Add Lead Note",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+            ],
+            "url": { "raw": "{{LEAD_URL}}/leads/{{LEAD_ID}}/notes", "host": ["{{LEAD_URL}}"], "path": ["leads", "{{LEAD_ID}}", "notes"] },
+            "body": { "mode": "raw", "raw": "{\n  \"type\": \"GENERAL\",\n  \"content\": \"Lead showed strong interest in 2BHK properties in Bandra. Follow up next Monday.\"\n}" }
+          }
+        },
+
+        {
+          "name": "Get Lead Notes",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{LEAD_URL}}/leads/{{LEAD_ID}}/notes", "host": ["{{LEAD_URL}}"], "path": ["leads", "{{LEAD_ID}}", "notes"] }
+          }
+        },
+
+        {
+          "name": "Schedule Follow-up",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+            ],
+            "url": { "raw": "{{LEAD_URL}}/leads/{{LEAD_ID}}/follow-ups", "host": ["{{LEAD_URL}}"], "path": ["leads", "{{LEAD_ID}}", "follow-ups"] },
+            "body": { "mode": "raw", "raw": "{\n  \"type\": \"CALL\",\n  \"scheduledAt\": \"2026-06-01T10:00:00.000Z\",\n  \"note\": \"Discuss 2BHK options in Andheri West\"\n}" }
+          }
+        },
+
+        {
+          "name": "Get Lead Follow-ups",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{LEAD_URL}}/leads/{{LEAD_ID}}/follow-ups", "host": ["{{LEAD_URL}}"], "path": ["leads", "{{LEAD_ID}}", "follow-ups"] }
+          }
+        },
+
+        {
+          "name": "Mark Follow-up Done",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{LEAD_URL}}/leads/{{LEAD_ID}}/follow-ups/FOLLOWUP_ID_HERE/done", "host": ["{{LEAD_URL}}"], "path": ["leads", "{{LEAD_ID}}", "follow-ups", "FOLLOWUP_ID_HERE", "done"] }
+          }
+        },
+
+        {
+          "name": "Get Lead Activity Log",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{LEAD_URL}}/leads/{{LEAD_ID}}/activities", "host": ["{{LEAD_URL}}"], "path": ["leads", "{{LEAD_ID}}", "activities"] }
+          }
+        },
+
+        {
+          "name": "Add Tag to Lead",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+            ],
+            "url": { "raw": "{{LEAD_URL}}/leads/{{LEAD_ID}}/tags", "host": ["{{LEAD_URL}}"], "path": ["leads", "{{LEAD_ID}}", "tags"] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"VIP\",\n  \"color\": \"#FF6B35\"\n}" }
+          }
+        },
+
+        {
+          "name": "Remove Tag from Lead",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{LEAD_URL}}/leads/{{LEAD_ID}}/tags/TAG_NAME_HERE", "host": ["{{LEAD_URL}}"], "path": ["leads", "{{LEAD_ID}}", "tags", "TAG_NAME_HERE"] }
+          }
+        },
+
+        {
+          "name": "Move Pipeline Stage",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+            ],
+            "url": { "raw": "{{LEAD_URL}}/leads/{{LEAD_ID}}/pipeline", "host": ["{{LEAD_URL}}"], "path": ["leads", "{{LEAD_ID}}", "pipeline"] },
+            "body": { "mode": "raw", "raw": "{\n  \"stage\": \"VISIT_SCHEDULED\"\n}" }
+          }
+        },
+
+        {
+          "name": "Lead Analytics — Summary",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{LEAD_URL}}/leads/analytics/summary", "host": ["{{LEAD_URL}}"], "path": ["leads", "analytics", "summary"] }
+          }
+        },
+
+        {
+          "name": "Lead Analytics — Funnel",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{LEAD_URL}}/leads/analytics/funnel", "host": ["{{LEAD_URL}}"], "path": ["leads", "analytics", "funnel"] }
+          }
+        },
+
+        {
+          "name": "Internal — Facebook Webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-internal-secret", "value": "{{INTERNAL_SECRET}}" }
+            ],
+            "url": { "raw": "{{LEAD_URL}}/internal/leads/facebook", "host": ["{{LEAD_URL}}"], "path": ["internal", "leads", "facebook"] },
+            "body": { "mode": "raw", "raw": "{\n  \"organizationId\": \"{{ORG_ID}}\",\n  \"leads\": [\n    {\n      \"firstName\": \"Suresh\",\n      \"phone\": \"+919000000001\",\n      \"email\": \"suresh@fb.com\",\n      \"sourceDetail\": \"facebook_campaign_summer2026\"\n    }\n  ]\n}" }
+          }
+        }
+
+      ]
+    },
+
+    {
+      "name": "📞 Calling Service",
+      "item": [
+
+        {
+          "name": "Initiate AI Call (Single Lead)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "if (pm.response.code === 201) {",
+            "  pm.collectionVariables.set('CALL_ID', pm.response.json().data.id);",
+            "  pm.test('Call initiated', () => pm.response.to.have.status(201));",
+            "}"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+            ],
+            "url": { "raw": "{{CALL_URL}}/calls", "host": ["{{CALL_URL}}"], "path": ["calls"] },
+            "body": { "mode": "raw", "raw": "{\n  \"leadId\": \"{{LEAD_ID}}\",\n  \"type\": \"AI_AUTOMATED\",\n  \"scriptId\": \"{{SCRIPT_ID}}\"\n}" }
+          }
+        },
+
+        {
+          "name": "List Call Records",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": {
+              "raw": "{{CALL_URL}}/calls?page=1&limit=20",
+              "host": ["{{CALL_URL}}"], "path": ["calls"],
+              "query": [
+                { "key": "page",     "value": "1" },
+                { "key": "limit",    "value": "20" },
+                { "key": "leadId",   "value": "", "disabled": true },
+                { "key": "status",   "value": "", "disabled": true },
+                { "key": "type",     "value": "", "disabled": true },
+                { "key": "from",     "value": "", "disabled": true },
+                { "key": "to",       "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+
+        {
+          "name": "Get Call Record by ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{CALL_URL}}/calls/{{CALL_ID}}", "host": ["{{CALL_URL}}"], "path": ["calls", "{{CALL_ID}}"] }
+          }
+        },
+
+        {
+          "name": "Get Call Transcript",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{CALL_URL}}/calls/{{CALL_ID}}/transcript", "host": ["{{CALL_URL}}"], "path": ["calls", "{{CALL_ID}}", "transcript"] }
+          }
+        },
+
+        {
+          "name": "Get Call AI Insights",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{CALL_URL}}/calls/{{CALL_ID}}/insights", "host": ["{{CALL_URL}}"], "path": ["calls", "{{CALL_ID}}", "insights"] }
+          }
+        },
+
+        {
+          "name": "Get Call Recording URL",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{CALL_URL}}/calls/{{CALL_ID}}/recording", "host": ["{{CALL_URL}}"], "path": ["calls", "{{CALL_ID}}", "recording"] }
+          }
+        },
+
+        {
+          "name": "Cancel Queued Call",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{CALL_URL}}/calls/{{CALL_ID}}", "host": ["{{CALL_URL}}"], "path": ["calls", "{{CALL_ID}}"] }
+          }
+        },
+
+        {
+          "name": "Get Calls for a Lead",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{CALL_URL}}/calls/lead/{{LEAD_ID}}", "host": ["{{CALL_URL}}"], "path": ["calls", "lead", "{{LEAD_ID}}"] }
+          }
+        },
+
+        {
+          "name": "Create Call Script",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "if (pm.response.code === 201) {",
+            "  pm.collectionVariables.set('SCRIPT_ID', pm.response.json().data.id);",
+            "}"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+            ],
+            "url": { "raw": "{{CALL_URL}}/scripts", "host": ["{{CALL_URL}}"], "path": ["scripts"] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Initial Contact — Real Estate v1\",\n  \"type\": \"INITIAL_CONTACT\",\n  \"language\": \"hi-en\",\n  \"openingLine\": \"Namaste {{lead_name}}, main Skyline Realty se bol raha hoon. Aapne hamare property mein interest dikhaya tha.\",\n  \"body\": \"Kya aap abhi 2-3 minute baat kar sakte hain? Main aapko ek achha deal batana chahta hoon jo aapke budget mein fit hoga.\",\n  \"closingLine\": \"Bahut accha. Main aapko details WhatsApp karta hoon aur kal call karta hoon appointment ke liye.\"\n}" }
+          }
+        },
+
+        {
+          "name": "List Call Scripts",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": {
+              "raw": "{{CALL_URL}}/scripts?type=INITIAL_CONTACT",
+              "host": ["{{CALL_URL}}"], "path": ["scripts"],
+              "query": [
+                { "key": "type",     "value": "INITIAL_CONTACT" },
+                { "key": "language", "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+
+        {
+          "name": "Update Call Script",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+            ],
+            "url": { "raw": "{{CALL_URL}}/scripts/{{SCRIPT_ID}}", "host": ["{{CALL_URL}}"], "path": ["scripts", "{{SCRIPT_ID}}"] },
+            "body": { "mode": "raw", "raw": "{\n  \"openingLine\": \"Hello {{lead_name}}, I'm calling from Skyline Realty.\",\n  \"isActive\": true,\n  \"isDefault\": true\n}" }
+          }
+        },
+
+        {
+          "name": "Delete Call Script",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{CALL_URL}}/scripts/{{SCRIPT_ID}}", "host": ["{{CALL_URL}}"], "path": ["scripts", "{{SCRIPT_ID}}"] }
+          }
+        },
+
+        {
+          "name": "Create Call Schedule (Batch Dialer)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+            ],
+            "url": { "raw": "{{CALL_URL}}/schedules", "host": ["{{CALL_URL}}"], "path": ["schedules"] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Monday Morning Batch\",\n  \"leadIds\": [\"{{LEAD_ID}}\", \"LEAD_ID_2\", \"LEAD_ID_3\"],\n  \"scriptId\": \"{{SCRIPT_ID}}\",\n  \"scheduledAt\": \"2026-06-02T06:00:00.000Z\",\n  \"timezone\": \"Asia/Kolkata\",\n  \"maxConcurrent\": 2,\n  \"delayBetween\": 30\n}" }
+          }
+        },
+
+        {
+          "name": "List Call Schedules",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": {
+              "raw": "{{CALL_URL}}/schedules?page=1&limit=10",
+              "host": ["{{CALL_URL}}"], "path": ["schedules"],
+              "query": [
+                { "key": "page",   "value": "1" },
+                { "key": "limit",  "value": "10" },
+                { "key": "status", "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+
+        {
+          "name": "Cancel Call Schedule",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{CALL_URL}}/schedules/SCHEDULE_ID_HERE", "host": ["{{CALL_URL}}"], "path": ["schedules", "SCHEDULE_ID_HERE"] }
+          }
+        },
+
+        {
+          "name": "Call Analytics — Summary",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": {
+              "raw": "{{CALL_URL}}/analytics/summary?from=2026-06-01&to=2026-06-30",
+              "host": ["{{CALL_URL}}"], "path": ["analytics", "summary"],
+              "query": [
+                { "key": "from", "value": "2026-06-01" },
+                { "key": "to",   "value": "2026-06-30" }
+              ]
+            }
+          }
+        },
+
+        {
+          "name": "Call Analytics — Agent Performance",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{CALL_URL}}/analytics/agents", "host": ["{{CALL_URL}}"], "path": ["analytics", "agents"] }
+          }
+        },
+
+        {
+          "name": "Get Usage Summary",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }],
+            "url": { "raw": "{{CALL_URL}}/usage", "host": ["{{CALL_URL}}"], "path": ["usage"] }
+          }
+        },
+
+        {
+          "name": "Internal — Provider Webhook (Twilio/Plivo)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-internal-secret", "value": "{{INTERNAL_SECRET}}" }
+            ],
+            "url": { "raw": "{{CALL_URL}}/internal/webhook/provider", "host": ["{{CALL_URL}}"], "path": ["internal", "webhook", "provider"] },
+            "body": { "mode": "raw", "raw": "{\n  \"callId\": \"{{CALL_ID}}\",\n  \"event\": \"answered\",\n  \"providerCallId\": \"CA1234567890\",\n  \"payload\": {\n    \"CallStatus\": \"in-progress\",\n    \"From\": \"+919999999999\",\n    \"To\": \"+919876543000\"\n  }\n}" }
+          }
+        },
+
+        {
+          "name": "Internal — Save AI Insights",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-internal-secret", "value": "{{INTERNAL_SECRET}}" }
+            ],
+            "url": { "raw": "{{CALL_URL}}/internal/calls/{{CALL_ID}}/insights", "host": ["{{CALL_URL}}"], "path": ["internal", "calls", "{{CALL_ID}}", "insights"] },
+            "body": { "mode": "raw", "raw": "{\n  \"sentiment\": \"POSITIVE\",\n  \"sentimentScore\": 0.82,\n  \"buyingIntent\": 78,\n  \"leadScore\": 75,\n  \"extractedBudgetMin\": 5000000,\n  \"extractedBudgetMax\": 8000000,\n  \"extractedLocation\": \"Bandra West\",\n  \"extractedBhk\": \"2BHK\",\n  \"extractedTimeline\": \"3 months\",\n  \"appointmentBooked\": true,\n  \"appointmentTime\": \"2026-06-05T11:00:00.000Z\",\n  \"summary\": \"Lead Vikram Mehta is actively looking for a 2BHK in Bandra with a budget of 50-80L. Appointment booked for site visit on June 5th.\",\n  \"keyPoints\": [\"Budget: 50-80 Lakhs\", \"Location: Bandra West\", \"Ready to move\", \"Appointment confirmed\"],\n  \"nextAction\": \"Send property brochure on WhatsApp and confirm appointment\",\n  \"predictedOutcome\": \"likely_to_convert\",\n  \"confidence\": 0.78,\n  \"model\": \"gpt-4o\",\n  \"processingMs\": 1240\n}" }
+          }
+        },
+
+        {
+          "name": "Internal — Save Transcript",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-internal-secret", "value": "{{INTERNAL_SECRET}}" }
+            ],
+            "url": { "raw": "{{CALL_URL}}/internal/calls/{{CALL_ID}}/transcript", "host": ["{{CALL_URL}}"], "path": ["internal", "calls", "{{CALL_ID}}", "transcript"] },
+            "body": { "mode": "raw", "raw": "{\n  \"fullText\": \"AI: Namaste Vikram ji, main Skyline Realty se bol raha hoon...\\nLead: Haan bolo...\\nAI: Aapne hamare 2BHK ke baare mein enquiry ki thi...\",\n  \"turns\": [\n    { \"speaker\": \"AI\",   \"text\": \"Namaste Vikram ji, main Skyline Realty se bol raha hoon.\", \"timestamp\": 0 },\n    { \"speaker\": \"LEAD\", \"text\": \"Haan bolo.\", \"timestamp\": 4 },\n    { \"speaker\": \"AI\",   \"text\": \"Aapne 2BHK ke baare mein enquiry ki thi Bandra mein?\", \"timestamp\": 6 }\n  ],\n  \"language\": \"hi-en\",\n  \"provider\": \"deepgram\"\n}" }
+          }
+        }
+
+      ]
+    }
+
+  ]
+}

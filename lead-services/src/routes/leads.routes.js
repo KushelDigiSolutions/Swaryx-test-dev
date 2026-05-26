@@ -73,7 +73,8 @@ export const verifyToken = (req, res, next) => {
     if (!token) return res.status(401).json({ success: false, message: "Token required" });
     req.user = jwt.verify(token, process.env.JWT_SECRET);
     next();
-  } catch {
+  } catch(err) {
+    console.error("[LEAD] Token verification failed -", err.message);
     return res.status(401).json({ success: false, message: "Invalid or expired token" });
   }
 };

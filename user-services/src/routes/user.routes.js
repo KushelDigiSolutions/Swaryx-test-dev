@@ -233,10 +233,10 @@ router.post("/organizations", verifyToken, isOrgAdmin, async (req, res) => {
     // Added x-internal-secret so internal route doesn't 403
     try {
       await axios.post(
-        `${process.env.SUBSCRIPTION_SERVICE_URL}/api/subscriptions/internal/initialize`,
+        `${process.env.SUBSCRIPTION_SERVICE_URL}/api/subscription/internal/initialize`,
         { organizationId: org.id, plan: "FREE" },
         {
-          headers: internalHeaders(req.headers.authorization), // [FIX-2] was missing secret
+          headers: internalHeaders(req.headers.authorization), 
           timeout: 5000,
         }
       );
