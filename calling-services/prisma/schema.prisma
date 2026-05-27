@@ -1,0 +1,414 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+
+// ============================================================
+// CALLING SERVICE — schema.prisma
+// ============================================================
+// Ye service handle karti hai:
+//  - Outbound calls (manual + AI automated)
+//  - Call recordings + transcriptions
+//  - AI script templates
+//  - AI conversation flow management
+//  - Call campaigns (bulk auto-dialing)
+//  - Call queue & scheduling
+//  - Sentiment analysis results
+//  - Appointment booking from calls
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"  
+}
+
+datasource db {
+  provider = "postgresql"
+  
+}
+
+// ─────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────
+
+enum CallType {
+  MANUAL        // Agent ne khud call kiya
+  AI_OUTBOUND   // AI ne auto dial kiya
+  AI_INBOUND    // AI ne inbound handle kiya
+}
+
+enum CallStatus {
+  QUEUED        // Dial hone ka wait kar raha hai
+  INITIATED     // Dial ho gaya, connect nahi
+  RINGING       // Ring ho raha hai
+  IN_PROGRESS   // Call chal raha hai
+  COMPLETED     // Successfully completed
+  NO_ANSWER     // Ring gaya, koi nahi uttha
+  BUSY          // Number busy
+  FAILED        // Technical failure
+  CANCELLED     // Cancel kar diya before dial
+  VOICEMAIL     // Voicemail mein gaya
+}
+
+enum CallDirection {
+  OUTBOUND
+  INBOUND
+}
+
+enum CallOutcome {
+  ANSWERED_POSITIVE   // Interested lead
+  ANSWERED_NEGATIVE   // Not interested
+  ANSWERED_CALLBACK   // Called back later request
+  APPOINTMENT_BOOKED  // Appointment set hua
+  VOICEMAIL_LEFT
+  NO_ANSWER
+  WRONG_NUMBER
+  DO_NOT_CALL         // Lead ne band karne ko kaha
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  RUNNING
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum ScriptType {
+  INTRODUCTION      // First call — greeting + qualification
+  FOLLOW_UP         // Follow-up call script
+  APPOINTMENT       // Appointment booking script
+  QUALIFICATION     // Budget/intent qualification
+  CALLBACK          // When lead requested callback
+  OBJECTION         // Handling objections
+}
+
+enum SentimentType {
+  POSITIVE
+  NEUTRAL
+  NEGATIVE
+  UNKNOWN
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+  RESCHEDULED
+}
+
+// ─────────────────────────────────────────────
+// CALL — Master call record
+// ─────────────────────────────────────────────
+
+model Call {
+  id             String        @id @default(uuid())
+  organizationId String        // FK to Organization (User Service)
+  leadId         String        // FK to Lead (Lead Service)
+  campaignId     String?       // FK to Campaign (if part of campaign)
+
+  // Who initiated
+  initiatedById  String?       // authUserId — null for AI calls
+  isAiCall       Boolean       @default(false)
+  type           CallType      @default(MANUAL)
+  direction      CallDirection @default(OUTBOUND)
+
+  // Call Identity (from Twilio/Plivo)
+  providerCallId  String?      @unique  // Twilio CallSid / Plivo call_uuid
+  fromNumber      String       // Caller number
+  toNumber        String       // Recipient number
+
+  // Status & Timing
+  status          CallStatus   @default(QUEUED)
+  scheduledAt     DateTime?    // For scheduled calls
+  startedAt       DateTime?    // When connected
+  endedAt         DateTime?
+  duration        Int?         // Seconds
+  ringDuration    Int?         // How long it rang before answer/hangup
+
+  // Outcome
+  outcome         CallOutcome?
+  outcomeNotes    String?
+
+  // Recording
+  recordingUrl    String?      // Storage URL
+  recordingSize   Int?         // Bytes
+  recordingStatus String?      // "completed" | "processing" | "failed"
+
+  // AI Script used
+  scriptId        String?
+  script          CallScript?  @relation(fields: [scriptId], references: [id])
+
+  // Cost tracking
+  costPerMinute   Decimal?     @db.Decimal(8, 4)
+  totalCost       Decimal?     @db.Decimal(10, 4)
+
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  // Relations
+  transcription   CallTranscription?
+  aiAnalysis      CallAiAnalysis?
+  appointment     Appointment?
+
+  @@index([organizationId])
+  @@index([leadId])
+  @@index([campaignId])
+  @@index([initiatedById])
+  @@index([status])
+  @@index([createdAt])
+  @@index([providerCallId])
+  @@map("calls")
+}
+
+// ─────────────────────────────────────────────
+// CALL TRANSCRIPTION — Real-time + final text
+// ─────────────────────────────────────────────
+
+model CallTranscription {
+  id             String   @id @default(uuid())
+  callId         String   @unique
+  call           Call     @relation(fields: [callId], references: [id], onDelete: Cascade)
+
+  // Full transcript
+  fullText       String?  // Complete conversation text
+  language       String   @default("en")
+
+  // Structured segments (each line of conversation)
+  segments       Json?
+  // Format: [
+  //   { speaker: "agent", text: "Hello, am I speaking to...", startMs: 0, endMs: 3500 },
+  //   { speaker: "lead", text: "Yes, who is this?", startMs: 3600, endMs: 5200 }
+  // ]
+
+  // Provider
+  provider       String?  // "deepgram" | "google" | "aws-transcribe"
+  confidence     Float?   // 0.0 - 1.0
+
+  status         String   @default("pending") // "pending" | "processing" | "completed" | "failed"
+  processedAt    DateTime?
+  createdAt      DateTime @default(now())
+
+  @@index([callId])
+  @@map("call_transcriptions")
+}
+
+// ─────────────────────────────────────────────
+// CALL AI ANALYSIS — Insights extracted post-call
+// ─────────────────────────────────────────────
+
+model CallAiAnalysis {
+  id             String        @id @default(uuid())
+  callId         String        @unique
+  call           Call          @relation(fields: [callId], references: [id], onDelete: Cascade)
+  leadId         String
+
+  // Sentiment
+  sentiment      SentimentType @default(UNKNOWN)
+  sentimentScore Float?        // -1.0 (negative) to +1.0 (positive)
+
+  // Lead Qualification
+  buyingIntent   Int?          // 0-100
+  isQualified    Boolean?
+
+  // Extracted Info
+  extractedBudget   String?    // "50-70 lakhs"
+  extractedLocation String?    // "Andheri West"
+  extractedTimeline String?    // "3 months"
+  extractedBhk      String?    // "2BHK"
+  objections        Json?      // ["too expensive", "need time"]
+
+  // Summary
+  aiSummary      String?       // 2-3 line summary
+  keyPoints      Json?         // ["Interested in ready possession", "Budget 60L"]
+  nextAction     String?       // AI recommended next step
+
+  // Score updates for Lead Service
+  suggestedScore String?       // "HOT" | "WARM" | "COLD"
+
+  processedAt    DateTime?
+  createdAt      DateTime      @default(now())
+
+  @@index([callId])
+  @@index([leadId])
+  @@map("call_ai_analyses")
+}
+
+// ─────────────────────────────────────────────
+// CALL SCRIPT — AI conversation templates
+// ─────────────────────────────────────────────
+
+model CallScript {
+  id             String     @id @default(uuid())
+  organizationId String
+  name           String
+  type           ScriptType @default(INTRODUCTION)
+  language       String     @default("en")
+  isDefault      Boolean    @default(false)
+  isActive       Boolean    @default(true)
+
+  // Script content
+  opening        String     // First thing AI says
+  qualification  Json?
+  // [
+  //   { question: "What's your budget?", key: "budget", type: "open" },
+  //   { question: "Which area?", key: "location", type: "open" }
+  // ]
+  closing        String?    // Closing line
+  objectionHandlers Json?
+  // { "too expensive": "I understand. We have options starting from...", ... }
+
+  createdById    String     // authUserId
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  calls          Call[]
+
+  @@index([organizationId])
+  @@index([type])
+  @@map("call_scripts")
+}
+
+// ─────────────────────────────────────────────
+// CALL CAMPAIGN — Bulk auto-dial campaigns
+// ─────────────────────────────────────────────
+
+model CallCampaign {
+  id             String         @id @default(uuid())
+  organizationId String
+  name           String
+  description    String?
+  scriptId       String?        // Which AI script to use
+  status         CampaignStatus @default(DRAFT)
+
+  // Schedule
+  scheduledAt    DateTime?
+  startedAt      DateTime?
+  completedAt    DateTime?
+
+  // Targeting — stored as list of leadIds (JSON array)
+  leadIds        Json           @default("[]")
+  totalLeads     Int            @default(0)
+
+  // Progress
+  calledCount    Int            @default(0)
+  answeredCount  Int            @default(0)
+  qualifiedCount Int            @default(0)
+  failedCount    Int            @default(0)
+
+  // Config
+  maxCallDuration  Int?         // Max seconds per call
+  callBetweenStart String?      // "09:00" — only call between these hours
+  callBetweenEnd   String?      // "18:00"
+  retryCount       Int          @default(1)  // Retry unanswered calls
+  retryAfterMins   Int          @default(60)
+
+  createdById    String
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([organizationId])
+  @@index([status])
+  @@map("call_campaigns")
+}
+
+// ─────────────────────────────────────────────
+// CALL QUEUE — Pending scheduled calls
+// ─────────────────────────────────────────────
+
+model CallQueue {
+  id             String   @id @default(uuid())
+  organizationId String
+  leadId         String
+  campaignId     String?
+  scriptId       String?
+  toNumber       String
+  scheduledAt    DateTime
+  attempts       Int      @default(0)
+  maxAttempts    Int      @default(3)
+  isProcessed    Boolean  @default(false)
+  processedAt    DateTime?
+  lastError      String?
+
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId])
+  @@index([scheduledAt])
+  @@index([isProcessed])
+  @@map("call_queue")
+}
+
+// ─────────────────────────────────────────────
+// APPOINTMENT — Booked during or after call
+// ─────────────────────────────────────────────
+
+model Appointment {
+  id             String            @id @default(uuid())
+  organizationId String
+  leadId         String
+  callId         String?           @unique
+  call           Call?             @relation(fields: [callId], references: [id])
+
+  assignedToId   String?           // authUserId — which agent will attend
+
+  title          String            @default("Site Visit")
+  scheduledAt    DateTime
+  duration       Int               @default(60)  // minutes
+  location       String?
+  notes          String?
+  status         AppointmentStatus @default(SCHEDULED)
+
+  // Calendar integration
+  googleEventId  String?
+  outlookEventId String?
+
+  // Reminder
+  reminderSent   Boolean  @default(false)
+  reminderSentAt DateTime?
+
+  completedAt    DateTime?
+  cancelledAt    DateTime?
+  cancelReason   String?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([leadId])
+  @@index([assignedToId])
+  @@index([scheduledAt])
+  @@index([status])
+  @@map("appointments")
+}
+
+// ─────────────────────────────────────────────
+// CALL PROVIDER CONFIG — Per-org Twilio/Plivo setup
+// ─────────────────────────────────────────────
+
+model CallProviderConfig {
+  id             String  @id @default(uuid())
+  organizationId String  @unique
+
+  provider       String  @default("twilio")  // "twilio" | "plivo" | "exotel"
+
+  // Credentials (should be encrypted at application level)
+  accountSid     String?
+  authToken      String?
+  phoneNumber    String? // The "from" number assigned to this org
+
+  // Plivo
+  plivoAuthId    String?
+  plivoAuthToken String?
+
+  // Webhook URLs (set these in Twilio/Plivo dashboard)
+  webhookBase    String? // e.g. https://api.yourapp.com/api/calling/webhooks
+
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("call_provider_configs")
+}

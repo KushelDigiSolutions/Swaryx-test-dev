@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Swaryx API Tester</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --border: #2a2a3a;
+    --accent: #7c6aff;
+    --accent2: #00e5c7;
+    --accent3: #ff6b6b;
+    --accent4: #ffd166;
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --success: #22c55e;
+    --error: #ef4444;
+    --warn: #f59e0b;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; min-height: 100vh; }
+
+  /* LAYOUT */
+  .app { display: flex; height: 100vh; overflow: hidden; }
+  .sidebar { width: 280px; min-width: 280px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* SIDEBAR */
+  .sidebar-header { padding: 20px 16px 14px; border-bottom: 1px solid var(--border); }
+  .logo { font-size: 18px; font-weight: 800; letter-spacing: -0.5px; }
+  .logo span { color: var(--accent); }
+  .logo-sub { font-size: 11px; color: var(--muted); font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+
+  /* BASE URL */
+  .base-url-wrap { padding: 10px 14px; border-bottom: 1px solid var(--border); }
+  .base-url-wrap label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 5px; font-family: 'JetBrains Mono', monospace; }
+  .base-url-wrap input { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 7px 10px; border-radius: 6px; font-size: 11px; font-family: 'JetBrains Mono', monospace; outline: none; }
+  .base-url-wrap input:focus { border-color: var(--accent); }
+
+  /* TOKEN */
+  .token-wrap { padding: 10px 14px; border-bottom: 1px solid var(--border); }
+  .token-wrap label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 5px; font-family: 'JetBrains Mono', monospace; }
+  .token-row { display: flex; gap: 6px; }
+  .token-row input { flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 7px 10px; border-radius: 6px; font-size: 10px; font-family: 'JetBrains Mono', monospace; outline: none; }
+  .token-row input:focus { border-color: var(--accent); }
+  .btn-clear { background: none; border: 1px solid var(--border); color: var(--muted); padding: 0 8px; border-radius: 6px; cursor: pointer; font-size: 11px; }
+  .btn-clear:hover { border-color: var(--error); color: var(--error); }
+
+  /* NAV */
+  .nav-scroll { flex: 1; overflow-y: auto; padding: 8px 0; }
+  .nav-scroll::-webkit-scrollbar { width: 4px; }
+  .nav-scroll::-webkit-scrollbar-track { background: transparent; }
+  .nav-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .service-group { margin-bottom: 4px; }
+  .service-label { padding: 8px 14px 4px; font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.2px; font-family: 'JetBrains Mono', monospace; display: flex; align-items: center; gap: 6px; }
+  .service-dot { width: 6px; height: 6px; border-radius: 50%; }
+
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 14px; cursor: pointer; transition: background 0.15s; border-left: 3px solid transparent; }
+  .nav-item:hover { background: var(--surface2); }
+  .nav-item.active { background: var(--surface2); border-left-color: var(--accent); }
+  .nav-item.active .nav-name { color: var(--accent); }
+  .method-badge { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; min-width: 40px; text-align: center; }
+  .GET    { background: rgba(0,229,199,0.15); color: var(--accent2); }
+  .POST   { background: rgba(124,106,255,0.2); color: var(--accent); }
+  .PUT    { background: rgba(255,209,102,0.15); color: var(--accent4); }
+  .DELETE { background: rgba(255,107,107,0.15); color: var(--accent3); }
+  .nav-name { font-size: 12px; color: var(--text); flex: 1; line-height: 1.3; }
+  .nav-auth { font-size: 9px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+  .lock { font-size: 9px; }
+
+  /* MAIN */
+  .main-header { padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; background: var(--surface); }
+  .main-header .method-badge { font-size: 11px; padding: 4px 10px; }
+  .endpoint-url { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text); flex: 1; }
+  .role-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+  .role-pill { font-size: 9px; font-family: 'JetBrains Mono', monospace; padding: 2px 8px; border-radius: 20px; background: rgba(124,106,255,0.12); border: 1px solid rgba(124,106,255,0.3); color: var(--accent); }
+
+  .content-area { flex: 1; display: flex; overflow: hidden; }
+  .request-panel { flex: 1; padding: 20px 24px; overflow-y: auto; border-right: 1px solid var(--border); }
+  .response-panel { flex: 1; padding: 20px 24px; overflow-y: auto; }
+
+  .panel-title { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; font-family: 'JetBrains Mono', monospace; margin-bottom: 14px; }
+
+  .field-group { margin-bottom: 14px; }
+  .field-group label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 5px; font-family: 'JetBrains Mono', monospace; }
+  .field-group input, .field-group select, .field-group textarea {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+    padding: 9px 12px; border-radius: var(--radius); font-size: 12px; outline: none;
+    font-family: 'JetBrains Mono', monospace; transition: border-color 0.15s;
+  }
+  .field-group input:focus, .field-group select:focus, .field-group textarea:focus { border-color: var(--accent); }
+  .field-group textarea { resize: vertical; min-height: 80px; }
+  .field-group select option { background: var(--surface2); }
+
+  .section-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; font-family: 'JetBrains Mono', monospace; margin: 18px 0 10px; border-top: 1px solid var(--border); padding-top: 14px; }
+
+  .send-btn {
+    background: var(--accent); color: #fff; border: none; padding: 11px 28px;
+    border-radius: var(--radius); font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: opacity 0.15s, transform 0.1s; display: flex; align-items: center; gap: 8px; margin-top: 16px;
+  }
+  .send-btn:hover { opacity: 0.85; }
+  .send-btn:active { transform: scale(0.98); }
+  .send-btn.loading { opacity: 0.6; pointer-events: none; }
+
+  /* RESPONSE */
+  .status-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; padding: 10px 14px; background: var(--surface2); border-radius: var(--radius); border: 1px solid var(--border); }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .status-dot.ok { background: var(--success); box-shadow: 0 0 8px var(--success); }
+  .status-dot.err { background: var(--error); box-shadow: 0 0 8px var(--error); }
+  .status-dot.pending { background: var(--muted); }
+  .status-code { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; }
+  .status-code.ok  { color: var(--success); }
+  .status-code.err { color: var(--error); }
+  .status-time { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); margin-left: auto; }
+
+  .response-body {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; line-height: 1.7;
+    color: var(--text); white-space: pre-wrap; word-break: break-all; min-height: 200px; max-height: 500px; overflow-y: auto;
+  }
+  .response-body::-webkit-scrollbar { width: 4px; }
+  .response-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .empty-state { color: var(--muted); font-family: 'JetBrains Mono', monospace; font-size: 12px; padding: 40px; text-align: center; }
+
+  .quick-actions { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .qa-btn { background: none; border: 1px solid var(--border); color: var(--muted); padding: 5px 10px; border-radius: 6px; font-size: 10px; font-family: 'JetBrains Mono', monospace; cursor: pointer; transition: all 0.15s; }
+  .qa-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+
+  .hint { font-size: 10px; color: var(--muted); margin-top: 4px; font-family: 'JetBrains Mono', monospace; }
+
+  .welcome { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 12px; }
+  .welcome h2 { font-size: 24px; font-weight: 800; color: var(--accent); }
+  .welcome p { color: var(--muted); font-size: 13px; text-align: center; max-width: 360px; line-height: 1.6; }
+
+  .copy-btn { background: none; border: 1px solid var(--border); color: var(--muted); padding: 4px 10px; border-radius: 5px; font-size: 10px; cursor: pointer; font-family: 'JetBrains Mono', monospace; }
+  .copy-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+  .response-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+
+  .json-key   { color: #a5c8ff; }
+  .json-str   { color: #98ff98; }
+  .json-num   { color: var(--accent4); }
+  .json-bool  { color: var(--accent3); }
+  .json-null  { color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">Swaryx<span>.</span>API</div>
+      <div class="logo-sub">// microservice tester</div>
+    </div>
+
+    <div class="base-url-wrap">
+      <label>Gateway Base URL</label>
+      <input id="baseUrl" value="http://localhost:5000" placeholder="http://localhost:5000"/>
+    </div>
+
+    <div class="token-wrap">
+      <label>Access Token (Bearer)</label>
+      <div class="token-row">
+        <input id="globalToken" placeholder="Paste accessToken here..."/>
+        <button class="btn-clear" onclick="document.getElementById('globalToken').value=''">✕</button>
+      </div>
+    </div>
+
+    <div class="nav-scroll" id="navScroll"></div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="main-header" id="mainHeader">
+      <div class="empty-state" style="padding:0;font-size:12px;">← Select an endpoint from the sidebar</div>
+    </div>
+    <div class="content-area" id="contentArea">
+      <div class="welcome">
+        <h2>Pick an Endpoint</h2>
+        <p>Select any API from the left panel. All 6 roles are covered:<br><strong>SUPER_ADMIN · PLATFORM_ADMIN · SUPPORT_AGENT · ORG_ADMIN · MANAGER · AGENT</strong></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+// API DEFINITIONS
+// ─────────────────────────────────────────────
+const SERVICES = {
+  AUTH:         { label: "Auth Service",         color: "#7c6aff", port: 5001 },
+  GATEWAY:      { label: "API Gateway",           color: "#00e5c7", port: 5000 },
+  USER:         { label: "User Service",          color: "#ffd166", port: 5002 },
+  SUBSCRIPTION: { label: "Subscription Service",  color: "#ff6b6b", port: 5003 },
+  NOTIFICATION: { label: "Notification Service",  color: "#a78bfa", port: 5004 },
+};
+
+const APIS = [
+  // ── AUTH ──────────────────────────────────────────────
+  {
+    id: "auth-register",
+    service: "GATEWAY",
+    method: "POST",
+    path: "/api/auth/register",
+    name: "Register User",
+    auth: false,
+    roles: ["ORG_ADMIN", "AGENT", "MANAGER", "SUPER_ADMIN", "PLATFORM_ADMIN", "SUPPORT_AGENT"],
+    fields: [
+      { key: "email",     label: "Email",     type: "text",     placeholder: "admin@company.com",  required: true },
+      { key: "password",  label: "Password",  type: "password", placeholder: "••••••••",           required: true },
+      { key: "role",      label: "Role",      type: "select",   options: ["ORG_ADMIN","AGENT","MANAGER","SUPER_ADMIN","PLATFORM_ADMIN","SUPPORT_AGENT"], required: true },
+      { key: "firstName", label: "First Name",type: "text",     placeholder: "Ravi" },
+      { key: "lastName",  label: "Last Name", type: "text",     placeholder: "Sharma" },
+    ],
+    hint: "Registers in Auth + auto-creates User profile. Response contains accessToken + refreshToken."
+  },
+  {
+    id: "auth-login",
+    service: "GATEWAY",
+    method: "POST",
+    path: "/api/auth/login",
+    name: "Login",
+    auth: false,
+    roles: ["ALL"],
+    fields: [
+      { key: "email",    label: "Email",    type: "text",     placeholder: "admin@company.com", required: true },
+      { key: "password", label: "Password", type: "password", placeholder: "••••••••",          required: true },
+    ],
+    hint: "Returns enriched response: accessToken, user profile, org, subscription, plan. Paste token above."
+  },
+  {
+    id: "auth-refresh",
+    service: "GATEWAY",
+    method: "POST",
+    path: "/api/auth/refresh",
+    name: "Refresh Token",
+    auth: false,
+    roles: ["ALL"],
+    fields: [
+      { key: "refreshToken", label: "Refresh Token", type: "text", placeholder: "Paste refreshToken here", required: true },
+    ],
+    hint: "Returns new accessToken. Public route — no Bearer needed."
+  },
+  {
+    id: "auth-me",
+    service: "GATEWAY",
+    method: "GET",
+    path: "/api/auth/me",
+    name: "Get Current User",
+    auth: true,
+    roles: ["ALL"],
+    fields: [],
+    hint: "Returns id, email, role, isVerified from Auth DB."
+  },
+  {
+    id: "auth-logout",
+    service: "GATEWAY",
+    method: "POST",
+    path: "/api/auth/logout",
+    name: "Logout",
+    auth: true,
+    roles: ["ALL"],
+    fields: [],
+    hint: "Clears refreshToken in DB. Token required."
+  },
+  {
+    id: "auth-verify-email",
+    service: "GATEWAY",
+    method: "POST",
+    path: "/api/auth/verify-email",
+    name: "Verify Email",
+    auth: false,
+    roles: ["ALL"],
+    fields: [
+      { key: "userId", label: "User ID", type: "text", placeholder: "cuid...", required: true },
+    ],
+    hint: "Sets isVerified=true. Public route."
+  },
+  {
+    id: "auth-reset-password",
+    service: "GATEWAY",
+    method: "POST",
+    path: "/api/auth/reset-password",
+    name: "Reset Password",
+    auth: false,
+    roles: ["ALL"],
+    fields: [
+      { key: "email",       label: "Email",        type: "text",     placeholder: "user@example.com", required: true },
+      { key: "newPassword", label: "New Password", type: "password", placeholder: "newpass123",       required: true },
+    ],
+    hint: "Public route — resets password by email."
+  },
+
+  // ── USER SERVICE ──────────────────────────────────────
+  {
+    id: "user-get-profile",
+    service: "GATEWAY",
+    method: "GET",
+    path: "/api/user/profile",
+    name: "Get My Profile",
+    auth: true,
+    roles: ["ALL"],
+    fields: [],
+    hint: "Returns full User record with org details. Auto-creates if missing (legacy users)."
+  },
+  {
+    id: "user-update-profile",
+    service: "GATEWAY",
+    method: "PUT",
+    path: "/api/user/profile",
+    name: "Update My Profile",
+    auth: true,
+    roles: ["ALL"],
+    fields: [
+      { key: "firstName",   label: "First Name",   type: "text", placeholder: "Ravi" },
+      { key: "lastName",    label: "Last Name",    type: "text", placeholder: "Sharma" },
+      { key: "phone",       label: "Phone",        type: "text", placeholder: "+91 98765 43210" },
+      { key: "department",  label: "Department",   type: "text", placeholder: "Engineering" },
+      { key: "designation", label: "Designation",  type: "text", placeholder: "Senior Dev" },
+    ],
+    hint: "Only firstName, lastName, phone, department, designation are editable. Role/email are locked."
+  },
+  {
+    id: "user-create-org",
+    service: "GATEWAY",
+    method: "POST",
+    path: "/api/user/organization",
+    name: "Create Organization",
+    auth: true,
+    roles: ["ORG_ADMIN", "SUPER_ADMIN", "PLATFORM_ADMIN"],
+    fields: [
+      { key: "name",        label: "Org Name",    type: "text",   placeholder: "Acme Corp",  required: true },
+      { key: "industry",    label: "Industry",    type: "text",   placeholder: "SaaS / Tech" },
+      { key: "companySize", label: "Company Size",type: "text",   placeholder: "1-10" },
+    ],
+    hint: "Creates org + auto-sets slug. ownerId = authUserId from token."
+  },
+  {
+    id: "user-create-user",
+    service: "GATEWAY",
+    method: "POST",
+    path: "/api/user/user",
+    name: "Create User (Admin)",
+    auth: true,
+    roles: ["ORG_ADMIN", "SUPER_ADMIN", "PLATFORM_ADMIN", "MANAGER"],
+    fields: [
+      { key: "authUserId",     label: "Auth User ID",   type: "text", placeholder: "cuid...", required: true },
+      { key: "email",          label: "Email",          type: "text", placeholder: "agent@org.com", required: true },
+      { key: "firstName",      label: "First Name",     type: "text", placeholder: "Amit",    required: true },
+      { key: "lastName",       label: "Last Name",      type: "text", placeholder: "Singh" },
+      { key: "role",           label: "Role",           type: "select", options: ["AGENT","MANAGER","ORG_ADMIN","SUPER_ADMIN","PLATFORM_ADMIN","SUPPORT_AGENT"] },
+      { key: "organizationId", label: "Organization ID",type: "text", placeholder: "cuid... (not needed for SUPER_ADMIN)" },
+      { key: "phone",          label: "Phone",          type: "text", placeholder: "+91..." },
+      { key: "department",     label: "Department",     type: "text", placeholder: "Support" },
+      { key: "designation",    label: "Designation",    type: "text", placeholder: "L1 Agent" },
+      { key: "employeeId",     label: "Employee ID",    type: "text", placeholder: "EMP001" },
+    ],
+    hint: "SUPER_ADMIN doesn't need organizationId. Everyone else does."
+  },
+  {
+    id: "user-get-users",
+    service: "GATEWAY",
+    method: "GET",
+    path: "/api/user/users/:orgId",
+    name: "Get All Users (Org)",
+    auth: true,
+    roles: ["ORG_ADMIN", "SUPER_ADMIN", "PLATFORM_ADMIN", "MANAGER"],
+    pathParams: [{ key: "orgId", label: "Organization ID", placeholder: "cuid..." }],
+    fields: [],
+    hint: "Returns all users in org. SUPER_ADMIN can query any org."
+  },
+  {
+    id: "user-get-single",
+    service: "GATEWAY",
+    method: "GET",
+    path: "/api/user/user/:id",
+    name: "Get Single User",
+    auth: true,
+    roles: ["ORG_ADMIN", "SUPER_ADMIN", "MANAGER"],
+    pathParams: [{ key: "id", label: "User ID", placeholder: "cuid..." }],
+    fields: [],
+    hint: "Fetches user by internal User Service ID."
+  },
+  {
+    id: "user-update-user",
+    service: "GATEWAY",
+    method: "PUT",
+    path: "/api/user/user/:id",
+    name: "Update User",
+    auth: true,
+    roles: ["ORG_ADMIN", "SUPER_ADMIN", "MANAGER"],
+    pathParams: [{ key: "id", label: "User ID", placeholder: "cuid..." }],
+    fields: [
+      { key: "firstName",   label: "First Name",   type: "text", placeholder: "" },
+      { key: "lastName",    label: "Last Name",    type: "text", placeholder: "" },
+      { key: "phone",       label: "Phone",        type: "text", placeholder: "" },
+      { key: "department",  label: "Department",   type: "text", placeholder: "" },
+      { key: "designation", label: "Designation",  type: "text", placeholder: "" },
+    ],
+    hint: "Admin update user fields."
+  },
+  {
+    id: "user-delete-user",
+    service: "GATEWAY",
+    method: "DELETE",
+    path: "/api/user/user/:id",
+    name: "Delete User",
+    auth: true,
+    roles: ["ORG_ADMIN", "SUPER_ADMIN"],
+    pathParams: [{ key: "id", label: "User ID", placeholder: "cuid..." }],
+    fields: [],
+    hint: "Hard deletes user from User Service DB."
+  },
+  {
+    id: "user-get-org",
+    service: "GATEWAY",
+    method: "GET",
+    path: "/api/user/organization/:id",
+    name: "Get Organization",
+    auth: true,
+    roles: ["ORG_ADMIN", "SUPER_ADMIN", "PLATFORM_ADMIN", "MANAGER"],
+    pathParams: [{ key: "id", label: "Organization ID", placeholder: "cuid..." }],
+    fields: [],
+    hint: "Returns org + all users. Available in login enriched response too."
+  },
+
+  // ── SUBSCRIPTION ──────────────────────────────────────
+  {
+    id: "sub-get-plans",
+    service: "GATEWAY",
+    method: "GET",
+    path: "/api/subscription/plans",
+    name: "Get All Plans",
+    auth: false,
+    roles: ["ALL"],
+    fields: [],
+    hint: "Public route. Returns all active plans."
+  },
+  {
+    id: "sub-create-plan",
+    service: "GATEWAY",
+    method: "POST",
+    path: "/api/subscription/plan",
+    name: "Create Plan",
+    auth: true,
+    roles: ["SUPER_ADMIN"],
+    fields: [
+      { key: "name",         label: "Plan Name",     type: "text",   placeholder: "Pro",    required: true },
+      { key: "priceMonthly", label: "Price Monthly", type: "number", placeholder: "999",    required: true },
+      { key: "priceYearly",  label: "Price Yearly",  type: "number", placeholder: "9999" },
+      { key: "userLimit",    label: "User Limit",    type: "number", placeholder: "50",     required: true },
+    ],
+    hint: "SUPER_ADMIN only. Defines pricing plans."
+  },
+  {
+    id: "sub-subscribe",
+    service: "GATEWAY",
+    method: "POST",
+    path: "/api/subscription/subscribe",
+    name: "Subscribe Org",
+    auth: true,
+    roles: ["ORG_ADMIN", "SUPER_ADMIN"],
+    fields: [
+      { key: "orgId",  label: "Organization ID", type: "text", placeholder: "cuid...", required: true },
+      { key: "planId", label: "Plan ID",          type: "text", placeholder: "cuid...", required: true },
+    ],
+    hint: "Creates an ACTIVE subscription for an org."
+  },
+  {
+    id: "sub-get-subscription",
+    service: "GATEWAY",
+    method: "GET",
+    path: "/api/subscription/subscription/:orgId",
+    name: "Get Org Subscription",
+    auth: true,
+    roles: ["ORG_ADMIN", "SUPER_ADMIN", "MANAGER", "PLATFORM_ADMIN"],
+    pathParams: [{ key: "orgId", label: "Organization ID", placeholder: "cuid..." }],
+    fields: [],
+    hint: "Returns active subscription for the org."
+  },
+  {
+    id: "sub-cancel",
+    service: "GATEWAY",
+    method: "POST",
+    path: "/api/subscription/cancel",
+    name: "Cancel Subscription",
+    auth: true,
+    roles: ["ORG_ADMIN", "SUPER_ADMIN"],
+    fields: [
+      { key: "subscriptionId", label: "Subscription ID", type: "text", placeholder: "cuid...", required: true },
+    ],
+    hint: "Sets subscription status to CANCELLED."
+  },
+  {
+    id: "sub-check-limit",
+    service: "GATEWAY",
+    method: "GET",
+    path: "/api/subscription/check-limit/:orgId",
+    name: "Check User Limit",
+    auth: true,
+    roles: ["ORG_ADMIN", "SUPER_ADMIN", "MANAGER", "PLATFORM_ADMIN"],
+    pathParams: [{ key: "orgId", label: "Organization ID", placeholder: "cuid..." }],
+    fields: [],
+    hint: "Returns userLimit from active plan. Used to enforce seat limits."
+  },
+
+  // ── NOTIFICATION ─────────────────────────────────────
+  {
+    id: "notif-send-email",
+    service: "GATEWAY",
+    method: "POST",
+    path: "/api/notification/send-email",
+    name: "Send Email",
+    auth: true,
+    roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "ORG_ADMIN", "MANAGER", "SUPPORT_AGENT"],
+    fields: [
+      { key: "to",      label: "To (Email)",  type: "text",     placeholder: "user@example.com", required: true },
+      { key: "subject", label: "Subject",     type: "text",     placeholder: "Your ticket update", required: true },
+      { key: "message", label: "HTML Message",type: "textarea", placeholder: "<p>Hello...</p>",   required: true },
+    ],
+    hint: "Sends email via SMTP. Logs to Notification DB with status SENT/FAILED."
+  },
+  {
+    id: "notif-my",
+    service: "GATEWAY",
+    method: "GET",
+    path: "/api/notification/my",
+    name: "My Notifications",
+    auth: true,
+    roles: ["ALL"],
+    fields: [],
+    hint: "Returns all notifications for the token user, ordered by newest first."
+  },
+  {
+    id: "notif-create",
+    service: "GATEWAY",
+    method: "POST",
+    path: "/api/notification/create",
+    name: "Create Internal Notification",
+    auth: true,
+    roles: ["SUPER_ADMIN", "PLATFORM_ADMIN", "ORG_ADMIN", "MANAGER"],
+    fields: [
+      { key: "userId",  label: "Target User ID", type: "text",     placeholder: "authUserId...", required: true },
+      { key: "title",   label: "Title",          type: "text",     placeholder: "Alert!",         required: true },
+      { key: "message", label: "Message",        type: "textarea", placeholder: "Your account...",required: true },
+    ],
+    hint: "Creates PENDING internal notification in DB (no email)."
+  },
+  {
+    id: "notif-retry",
+    service: "GATEWAY",
+    method: "POST",
+    path: "/api/notification/retry",
+    name: "Retry Failed Notifications",
+    auth: true,
+    roles: ["SUPER_ADMIN", "PLATFORM_ADMIN"],
+    fields: [],
+    hint: "Retries all FAILED notifications. Admin only."
+  },
+
+  // ── GATEWAY HEALTH ────────────────────────────────────
+  {
+    id: "gw-health",
+    service: "GATEWAY",
+    method: "GET",
+    path: "/health",
+    name: "Gateway Health",
+    auth: false,
+    roles: ["ALL"],
+    fields: [],
+    hint: "Returns status of all downstream services."
+  },
+];
+
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
+let currentApi = null;
+
+// ─────────────────────────────────────────────
+// BUILD SIDEBAR NAV
+// ─────────────────────────────────────────────
+function buildNav() {
+  const nav = document.getElementById("navScroll");
+  const groups = {};
+  APIS.forEach(api => {
+    if (!groups[api.service]) groups[api.service] = [];
+    groups[api.service].push(api);
+  });
+
+  Object.entries(groups).forEach(([svc, apis]) => {
+    const info = SERVICES[svc];
+    const group = document.createElement("div");
+    group.className = "service-group";
+    group.innerHTML = `<div class="service-label"><span class="service-dot" style="background:${info.color}"></span>${info.label}</div>`;
+    apis.forEach(api => {
+      const item = document.createElement("div");
+      item.className = "nav-item";
+      item.id = "nav-" + api.id;
+      item.innerHTML = `<span class="method-badge ${api.method}">${api.method}</span><span class="nav-name">${api.name}</span><span class="nav-auth">${api.auth ? "🔒" : ""}</span>`;
+      item.onclick = () => selectApi(api);
+      group.appendChild(item);
+    });
+    nav.appendChild(group);
+  });
+}
+
+// ─────────────────────────────────────────────
+// SELECT API
+// ─────────────────────────────────────────────
+function selectApi(api) {
+  if (currentApi) {
+    document.getElementById("nav-" + currentApi.id)?.classList.remove("active");
+  }
+  currentApi = api;
+  document.getElementById("nav-" + api.id)?.classList.add("active");
+  renderMain(api);
+}
+
+// ─────────────────────────────────────────────
+// RENDER MAIN
+// ─────────────────────────────────────────────
+function renderMain(api) {
+  const svc = SERVICES[api.service];
+  const rolePills = (api.roles[0] === "ALL" ? ["ALL ROLES"] : api.roles)
+    .map(r => `<span class="role-pill">${r}</span>`).join("");
+
+  document.getElementById("mainHeader").innerHTML = `
+    <span class="method-badge ${api.method}" style="font-size:12px;padding:5px 12px">${api.method}</span>
+    <span class="endpoint-url">${api.path}</span>
+    <div class="role-pills">${rolePills}</div>
+  `;
+
+  const hasPath = api.pathParams && api.pathParams.length > 0;
+  const hasBody = api.fields.length > 0;
+
+  let fieldsHtml = "";
+
+  if (hasPath) {
+    fieldsHtml += `<div class="section-label" style="margin-top:0;border-top:none;padding-top:0">Path Parameters</div>`;
+    api.pathParams.forEach(p => {
+      fieldsHtml += `
+        <div class="field-group">
+          <label>${p.label} <span style="color:var(--error)">*</span></label>
+          <input id="param_${p.key}" type="text" placeholder="${p.placeholder}" />
+        </div>`;
+    });
+  }
+
+  if (hasBody) {
+    if (hasPath) fieldsHtml += `<div class="section-label">Body</div>`;
+    api.fields.forEach(f => {
+      if (f.type === "select") {
+        const opts = f.options.map(o => `<option value="${o}">${o}</option>`).join("");
+        fieldsHtml += `<div class="field-group"><label>${f.label}${f.required?' <span style="color:var(--error)">*</span>':""}</label><select id="field_${f.key}">${opts}</select></div>`;
+      } else if (f.type === "textarea") {
+        fieldsHtml += `<div class="field-group"><label>${f.label}${f.required?' <span style="color:var(--error)">*</span>':""}</label><textarea id="field_${f.key}" placeholder="${f.placeholder}"></textarea></div>`;
+      } else {
+        fieldsHtml += `<div class="field-group"><label>${f.label}${f.required?' <span style="color:var(--error)">*</span>':""}</label><input id="field_${f.key}" type="${f.type}" placeholder="${f.placeholder}"/></div>`;
+      }
+    });
+  }
+
+  if (!hasPath && !hasBody) {
+    fieldsHtml = `<div class="empty-state" style="padding:30px 0">No body required for this request.</div>`;
+  }
+
+  document.getElementById("contentArea").innerHTML = `
+    <div class="request-panel">
+      <div class="panel-title">Request</div>
+
+      ${api.auth ? `<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:9px 12px;background:rgba(124,106,255,0.08);border:1px solid rgba(124,106,255,0.2);border-radius:8px;">
+        <span style="font-size:12px">🔒</span>
+        <span style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--accent)">Bearer token required — paste above</span>
+      </div>` : `<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:9px 12px;background:rgba(0,229,199,0.07);border:1px solid rgba(0,229,199,0.15);border-radius:8px;">
+        <span style="font-size:12px">🌐</span>
+        <span style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--accent2)">Public route — no token needed</span>
+      </div>`}
+
+      ${fieldsHtml}
+
+      <p class="hint" style="margin-bottom:0">💡 ${api.hint}</p>
+
+      <button class="send-btn" id="sendBtn" onclick="sendRequest()">
+        <span>▶ Send Request</span>
+      </button>
+    </div>
+
+    <div class="response-panel">
+      <div class="response-header-row">
+        <div class="panel-title" style="margin-bottom:0">Response</div>
+        <button class="copy-btn" onclick="copyResponse()">Copy</button>
+      </div>
+      <div class="status-bar" id="statusBar">
+        <span class="status-dot pending"></span>
+        <span style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--muted)">Waiting...</span>
+      </div>
+      <div class="response-body" id="responseBody"><span style="color:var(--muted)">// Response will appear here</span></div>
+
+      ${api.id === "auth-login" || api.id === "auth-register" ? `
+      <div style="margin-top:14px;padding:10px 14px;background:rgba(0,229,199,0.07);border:1px solid rgba(0,229,199,0.15);border-radius:8px;">
+        <div style="font-size:10px;color:var(--accent2);font-family:'JetBrains Mono',monospace;margin-bottom:6px">⚡ AUTO-SET TOKEN</div>
+        <div style="font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace">accessToken will be auto-pasted into the Bearer field on success.</div>
+      </div>` : ""}
+    </div>
+  `;
+}
+
+// ─────────────────────────────────────────────
+// SEND REQUEST
+// ─────────────────────────────────────────────
+async function sendRequest() {
+  if (!currentApi) return;
+
+  const btn = document.getElementById("sendBtn");
+  btn.classList.add("loading");
+  btn.innerHTML = '<span>⏳ Sending...</span>';
+
+  const base = document.getElementById("baseUrl").value.replace(/\/$/, "");
+  const token = document.getElementById("globalToken").value.trim();
+
+  // Build URL
+  let path = currentApi.path;
+  if (currentApi.pathParams) {
+    currentApi.pathParams.forEach(p => {
+      const val = document.getElementById("param_" + p.key)?.value.trim();
+      if (val) path = path.replace(":" + p.key, val);
+    });
+  }
+  const url = base + path;
+
+  // Build body
+  const body = {};
+  currentApi.fields.forEach(f => {
+    const el = document.getElementById("field_" + f.key);
+    if (el && el.value.trim()) {
+      const v = el.value.trim();
+      body[f.key] = (f.type === "number") ? Number(v) : v;
+    }
+  });
+
+  // Headers
+  const headers = { "Content-Type": "application/json" };
+  if (currentApi.auth && token) headers["Authorization"] = "Bearer " + token;
+  else if (!currentApi.auth && token) {} // don't send for public routes unless set
+
+  const opts = { method: currentApi.method, headers };
+  if (currentApi.method !== "GET" && Object.keys(body).length > 0) {
+    opts.body = JSON.stringify(body);
+  }
+
+  const t0 = Date.now();
+  try {
+    const resp = await fetch(url, opts);
+    const elapsed = Date.now() - t0;
+    let data;
+    try { data = await resp.json(); } catch { data = { raw: await resp.text() }; }
+
+    renderResponse(resp.status, data, elapsed);
+
+    // Auto-set token
+    if ((currentApi.id === "auth-login" || currentApi.id === "auth-register") && data?.data?.accessToken) {
+      document.getElementById("globalToken").value = data.data.accessToken;
+    }
+
+  } catch (err) {
+    renderResponse(0, { error: err.message, hint: "Check if the server is running and CORS is enabled." }, Date.now() - t0);
+  }
+
+  btn.classList.remove("loading");
+  btn.innerHTML = '<span>▶ Send Request</span>';
+}
+
+// ─────────────────────────────────────────────
+// RENDER RESPONSE
+// ─────────────────────────────────────────────
+function renderResponse(status, data, elapsed) {
+  const bar = document.getElementById("statusBar");
+  const body = document.getElementById("responseBody");
+  const ok = status >= 200 && status < 300;
+  const cls = status === 0 ? "err" : (ok ? "ok" : "err");
+
+  bar.innerHTML = `
+    <span class="status-dot ${cls}"></span>
+    <span class="status-code ${cls}">${status || "ERR"}</span>
+    <span style="font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace">${status ? getStatusText(status) : "Network Error"}</span>
+    <span class="status-time">${elapsed}ms</span>
+  `;
+
+  body.innerHTML = syntaxHighlight(JSON.stringify(data, null, 2));
+}
+
+function getStatusText(s) {
+  const map = {200:"OK",201:"Created",400:"Bad Request",401:"Unauthorized",403:"Forbidden",404:"Not Found",409:"Conflict",422:"Unprocessable",500:"Server Error",502:"Bad Gateway"};
+  return map[s] || "";
+}
+
+function syntaxHighlight(json) {
+  return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function(match) {
+    if (/^"/.test(match)) {
+      if (/:$/.test(match)) return `<span class="json-key">${match}</span>`;
+      return `<span class="json-str">${match}</span>`;
+    }
+    if (/true|false/.test(match)) return `<span class="json-bool">${match}</span>`;
+    if (/null/.test(match)) return `<span class="json-null">${match}</span>`;
+    return `<span class="json-num">${match}</span>`;
+  });
+}
+
+function copyResponse() {
+  const text = document.getElementById("responseBody")?.innerText;
+  if (text) navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector(".copy-btn");
+    if (btn) { btn.textContent = "Copied!"; setTimeout(() => btn.textContent = "Copy", 1500); }
+  });
+}
+
+// ─────────────────────────────────────────────
+// KEYBOARD SHORTCUT
+// ─────────────────────────────────────────────
+document.addEventListener("keydown", e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === "Enter") sendRequest();
+});
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+buildNav();
+</script>
+</body>
+</html>

@@ -11,53 +11,195 @@ datasource db {
   provider = "postgresql"
   
 }
+// ─────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────
 
-
-model Plan {
-  id            String   @id @default(uuid())
-  name          String
-  description   String?
-
-  priceMonthly  Float
-  priceYearly   Float?
-
-  userLimit     Int
-  storageLimit  Int?
-
-  isActive      Boolean @default(true)
-
-  createdAt     DateTime @default(now())
+enum PlanTier {
+  FREE
+  STARTER
+  GROWTH
+  ENTERPRISE
 }
 
-model Subscription {
-  id            String   @id @default(uuid())
-  orgId         String   // from user service
-  planId        String
-
-  status        SubscriptionStatus
-
-  startDate     DateTime
-  endDate       DateTime?
-
-  isTrial       Boolean @default(false)
-
-  createdAt     DateTime @default(now())
-}
-
-model Feature {
-  id            String @id @default(uuid())
-  name          String
-  code          String @unique
-}
-
-model PlanFeature {
-  id        String @id @default(uuid())
-  planId    String
-  featureId String
+enum BillingCycle {
+  MONTHLY
+  YEARLY
 }
 
 enum SubscriptionStatus {
   ACTIVE
+  TRIALING
+  PAST_DUE
   CANCELLED
   EXPIRED
+  PAUSED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  OPEN
+  PAID
+  VOID
+  UNCOLLECTABLE
+}
+
+enum PaymentMethod {
+  CARD
+  UPI
+  BANK_TRANSFER
+  WALLET
+}
+
+// ─────────────────────────────────────────────
+// PLAN — Available subscription tiers
+// ─────────────────────────────────────────────
+
+model Plan {
+  id          String      @id @default(uuid())
+  name        String      @unique
+  tier        PlanTier    @unique
+  description String?
+
+  // Pricing
+  monthlyPrice Decimal @db.Decimal(10, 2)
+  yearlyPrice  Decimal @db.Decimal(10, 2)
+
+  // Feature Limits
+  maxUsers         Int     @default(5)
+  maxProjects      Int     @default(3)
+  maxStorageGb     Int     @default(5)
+  maxApiCallsMonth Int     @default(1000)
+
+  // Feature Flags (JSON for flexibility)
+  features Json @default("{}")
+  // e.g. { "analytics": true, "customBranding": false, "prioritySupport": false }
+
+  isActive    Boolean @default(true)
+  isPublic    Boolean @default(true) // false = enterprise only (manual setup)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subscriptions Subscription[]
+
+  @@map("plans")
+}
+
+// ─────────────────────────────────────────────
+// SUBSCRIPTION — Org's active plan
+// ─────────────────────────────────────────────
+
+model Subscription {
+  id             String @id @default(uuid())
+  organizationId String @unique  // One subscription per org
+
+  planId         String
+  plan           Plan   @relation(fields: [planId], references: [id])
+
+  status         SubscriptionStatus @default(TRIALING)
+  billingCycle   BillingCycle       @default(MONTHLY)
+
+  // Dates
+  trialEndsAt    DateTime?
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  cancelledAt    DateTime?
+  cancelAtPeriodEnd Boolean @default(false)
+
+  // External payment gateway reference (Razorpay/Stripe)
+  gatewayCustomerId     String?
+  gatewaySubscriptionId String?
+
+  // Computed: seats actually used — updated via usage tracking
+  seatsUsed Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  invoices     Invoice[]
+  usageLogs    UsageLog[]
+  usageSummary UsageSummary[]
+
+  @@index([organizationId])
+  @@index([status])
+  @@map("subscriptions")
+}
+
+// ─────────────────────────────────────────────
+// INVOICE
+// ─────────────────────────────────────────────
+
+model Invoice {
+  id             String        @id @default(uuid())
+  subscriptionId String
+  subscription   Subscription  @relation(fields: [subscriptionId], references: [id])
+
+  invoiceNumber  String        @unique
+  status         InvoiceStatus @default(DRAFT)
+  amount         Decimal       @db.Decimal(10, 2)
+  tax            Decimal       @db.Decimal(10, 2) @default(0)
+  total          Decimal       @db.Decimal(10, 2)
+  currency       String        @default("INR")
+
+  billingPeriodStart DateTime
+  billingPeriodEnd   DateTime
+
+  // Payment
+  paidAt        DateTime?
+  paymentMethod PaymentMethod?
+  gatewayPaymentId String?
+
+  // PDF
+  pdfUrl String?
+
+  dueDate   DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([subscriptionId])
+  @@index([status])
+  @@map("invoices")
+}
+
+// ─────────────────────────────────────────────
+// USAGE LOG — Per-event tracking
+// ─────────────────────────────────────────────
+
+model UsageLog {
+  id             String       @id @default(uuid())
+  subscriptionId String
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id])
+
+  metric    String  // "api_calls", "storage_mb", "seats"
+  quantity  Int     @default(1)
+  metadata  Json?
+
+  recordedAt DateTime @default(now())
+
+  @@index([subscriptionId])
+  @@index([metric])
+  @@index([recordedAt])
+  @@map("usage_logs")
+}
+
+// ─────────────────────────────────────────────
+// USAGE SUMMARY — Aggregated per billing period
+// ─────────────────────────────────────────────
+
+model UsageSummary {
+  id             String       @id @default(uuid())
+  subscriptionId String
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id])
+
+  periodStart DateTime
+  periodEnd   DateTime
+  metric      String
+  total       Int
+
+  createdAt DateTime @default(now())
+
+  @@unique([subscriptionId, metric, periodStart])
+  @@index([subscriptionId])
+  @@map("usage_summaries")
 }

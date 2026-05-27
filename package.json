@@ -5,14 +5,18 @@
   "type": "module",
   "scripts": {
     "install:all": "npm install && cd auth-services && npm install && cd ../user-services && npm install && cd ../subscription-service && npm install && cd ../notification-service && npm install",
-    "dev": "concurrently -n gateway,auth,user,subscription,notification -c blue,green,yellow,magenta,cyan \"npm run dev:gateway\" \"npm run dev:auth\" \"npm run dev:user\" \"npm run dev:subscription\" \"npm run dev:notification\"",
-    "start": "node app.js",
+    "dev": "concurrently -n gateway,auth,user,subscription,notification,lead,calling -c blue,green,yellow,magenta,cyan,red,white \"npm run dev:gateway\" \"npm run dev:auth\" \"npm run dev:user\" \"npm run dev:subscription\" \"npm run dev:notification\" \"npm run dev:lead\" \"npm run dev:calling\"",
+    "start": "concurrently -n gateway,auth,user,subscription,notification -c blue,green,yellow,magenta,cyan \"npm run start:gateway\" \"npm run start:auth\" \"npm run start:user\" \"npm run start:subscription\" \"npm run start:notification\"",
     "dev:gateway": "nodemon app.js",
     "dev:auth": "cd auth-services && npm run dev",
     "dev:user": "cd user-services && npm run dev",
     "dev:subscription": "cd subscription-service && npm run dev",
     "dev:notification": "cd notification-service && npm run dev",
+    "dev:lead": "cd lead-services && npm run dev",
+    "dev:calling": "cd calling-services && npm run dev",
     "start:gateway": "node app.js",
+    "lead": "npm run dev:lead",
+    "calling": "npm run dev:calling",
     "start:auth": "cd auth-services && npm start",
     "start:user": "cd user-services && npm start",
     "start:subscription": "cd subscription-service && npm start",
@@ -30,17 +34,27 @@
     "db:studio": "cd auth-services && npm run prisma:studio"
   },
   "dependencies": {
-    "axios": "^1.16.0",
-    "concurrently": "^9.2.1",
+    "axios": "^1.16.1",
+    "bcryptjs": "^3.0.3",
+    "compression": "^1.8.1",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "express-rate-limit": "^8.5.1",
+    "express-http-proxy": "^2.1.2",
+    "express-rate-limit": "^8.5.2",
+    "express-slow-down": "^3.1.0",
+    "express-validator": "^7.3.2",
+    "helmet": "^8.2.0",
+    "hpp": "^0.2.3",
     "http-proxy-middleware": "^3.0.5",
     "jsonwebtoken": "^9.0.3",
-    "morgan": "^1.10.1"
+    "morgan": "^1.10.1",
+    "opossum": "^9.0.0",
+    "winston": "^3.19.0"
   },
   "devDependencies": {
+    "concurrently": "^9.2.1",
     "nodemon": "^3.1.14"
   }
 }

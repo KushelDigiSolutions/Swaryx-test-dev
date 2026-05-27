@@ -1,7 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 
-import userRoutes from "./src/routes/user.routes.js";
+import callingRoutes from "./src/routes/calls.routes.js";
 
 dotenv.config();
 
@@ -18,7 +18,7 @@ app.use(express.json());
 ///////////////////////////////////////////////////////////
 
 app.use((req, _res, next) => {
-  console.log(`[USER SERVICE] ${req.method} ${req.url}`);
+  console.log(`[NOTIFICATION SERVICE] ${req.method} ${req.url}`);
   next();
 });
 
@@ -29,7 +29,7 @@ app.use((req, _res, next) => {
 app.get("/health", (_req, res) => {
   return res.status(200).json({
     success: true,
-    service: "User Service",
+    service: "Notification Service",
     status: "Running",
   });
 });
@@ -38,14 +38,14 @@ app.get("/health", (_req, res) => {
 // ROUTES
 ///////////////////////////////////////////////////////////
 
-app.use("/api/users", userRoutes);
+app.use("/api/calls", callingRoutes);
 
 ///////////////////////////////////////////////////////////
 // DEFAULT ROUTE
 ///////////////////////////////////////////////////////////
 
 app.get("/", (_req, res) => {
-  return res.send("User Service Running...");
+  return res.send("Notification Service Running...");
 });
 
 ///////////////////////////////////////////////////////////
@@ -63,8 +63,8 @@ app.use((req, res) => {
 // SERVER
 ///////////////////////////////////////////////////////////
 
-const PORT = process.env.PORT || 5002;
+const PORT = process.env.PORT || 5004;
 
 app.listen(PORT, () => {
-  console.log(`User Service running on ${PORT}`);
+  console.log(`Notification Service running on ${PORT}`);
 });

@@ -1,292 +1,327 @@
 import express from "express";
-import dotenv from "dotenv";
-import { createProxyMiddleware } from "http-proxy-middleware";
-import jwt from "jsonwebtoken";
-import rateLimit from "express-rate-limit";
 import cors from "cors";
-import axios from "axios";
+import helmet from "helmet";
+import compression from "compression";
+import morgan from "morgan";
+import rateLimit from "express-rate-limit";
+import slowDown from "express-slow-down";
+import proxy from "express-http-proxy";
+import dotenv from "dotenv";
+import crypto from "crypto";
+import hpp from "hpp";
 
 dotenv.config();
 
 const app = express();
 
-///////////////////////////////////////////////////////////
-// SERVICE URLs
-///////////////////////////////////////////////////////////
+// ======================================================
+// TRUST PROXY
+// ======================================================
 
-const SERVICES = {
-  AUTH:         process.env.AUTH_SERVICE_URL         || "http://localhost:5001",
-  USER:         process.env.USER_SERVICE_URL         || "http://localhost:5002",
-  SUBSCRIPTION: process.env.SUBSCRIPTION_SERVICE_URL || "http://localhost:5003",
-  NOTIFICATION: process.env.NOTIFICATION_SERVICE_URL || "http://localhost:5004",
-};
+app.set("trust proxy", 1);
 
-app.use(cors());
+// ======================================================
+// SECURITY HEADERS
+// ======================================================
 
-///////////////////////////////////////////////////////////
-// REQUEST LOGGER
-///////////////////////////////////////////////////////////
+app.use(
+  helmet({
+    crossOriginResourcePolicy: false,
+    contentSecurityPolicy: false,
+  })
+);
 
-app.use((req, _res, next) => {
-  console.log(`[API GATEWAY] ${req.method} ${req.url}`);
+// ======================================================
+// CORS
+// ======================================================
+
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://localhost:5173",
+];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error("CORS not allowed"));
+    },
+    credentials: true,
+  })
+);
+
+// ======================================================
+// BODY PARSER
+// ======================================================
+
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+
+// ======================================================
+// COMPRESSION
+// ======================================================
+
+app.use(compression());
+
+// ======================================================
+// HTTP PARAM POLLUTION PROTECTION
+// ======================================================
+
+app.use(hpp());
+
+// ======================================================
+// REQUEST ID MIDDLEWARE
+// ======================================================
+
+app.use((req, res, next) => {
+  req.requestId = crypto.randomUUID();
+
+  res.setHeader("X-Request-Id", req.requestId);
+
   next();
 });
 
-///////////////////////////////////////////////////////////
+// ======================================================
+// LOGGING
+// ======================================================
+
+morgan.token("id", (req) => req.requestId);
+
+app.use(
+  morgan(
+    "[:id] :method :url :status :response-time ms - :res[content-length]"
+  )
+);
+
+// ======================================================
 // RATE LIMITER
-///////////////////////////////////////////////////////////
+// ======================================================
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 500,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { success: false, message: "Too many requests, please try again later." },
+
+  message: {
+    success: false,
+    message: "Too many requests",
+  },
 });
 
 app.use(limiter);
 
-///////////////////////////////////////////////////////////
-// JWT VERIFY MIDDLEWARE
-///////////////////////////////////////////////////////////
+// ======================================================
+// SLOW DOWN ATTACK PROTECTION
+// ======================================================
 
-const verifyToken = (req, res, next) => {
-  try {
-    const token = req.headers.authorization?.split(" ")[1];
-    if (!token) {
-      return res.status(401).json({ success: false, message: "Access token not provided" });
-    }
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
-    req.headers["x-user-id"]   = decoded.userId;
-    req.headers["x-user-role"] = decoded.role;
-    next();
-  } catch (error) {
-    return res.status(401).json({ success: false, message: "Invalid or expired token" });
-  }
-};
+const speedLimiter = slowDown({
+  windowMs: 15 * 60 * 1000,
+  delayAfter: 100,
+  delayMs: () => 500,
+});
 
-///////////////////////////////////////////////////////////
-// PROXY HELPER
-///////////////////////////////////////////////////////////
+app.use(speedLimiter);
 
-const createProxy = (target, pathFilter) =>
-  createProxyMiddleware({
-    target,
-    changeOrigin: true,
-    pathFilter,
-    on: {
-      proxyReq: (_proxyReq, req) => {
-        console.log(`[PROXY ->] ${req.method} ${req.url} -> ${target}`);
-      },
-      error: (err, _req, res) => {
-        console.error(`[PROXY ERROR] ${err.message}`);
-        res.status(502).json({ success: false, message: "Service unavailable." });
-      },
-    },
-  });
-
-///////////////////////////////////////////////////////////
+// ======================================================
 // HEALTH CHECK
-///////////////////////////////////////////////////////////
+// ======================================================
 
-app.get("/health", (_req, res) => {
+app.get("/health", (req, res) => {
   return res.status(200).json({
     success: true,
     service: "API Gateway",
-    status: "Running",
-    services: SERVICES,
+    uptime: process.uptime(),
+    memory: process.memoryUsage(),
+    timestamp: new Date(),
   });
 });
 
-app.get("/", (_req, res) => res.send("API Gateway Running..."));
+// ======================================================
+// PROXY OPTIONS
+// ======================================================
 
-///////////////////////////////////////////////////////////
-// 🔐 LOGIN — Enriched Response
-//
-// Gateway login ko intercept karta hai:
-// 1. Auth service se login karo → accessToken lo
-// 2. Token decode karo → userId, orgId nikalo
-// 3. User Service se user profile lo
-// 4. Subscription Service se active plan lo
-// 5. Sab ek saath client ko bhejo
-///////////////////////////////////////////////////////////
+const proxyOptions = (basePath) => ({
+  proxyReqPathResolver: (req) => {
+    return `${basePath}${req.url}`;
+  },
 
-app.post("/api/auth/login", express.json(), async (req, res) => {
-  try {
-    // Step 1: Auth service se login
-    const authResponse = await axios.post(
-      `${SERVICES.AUTH}/api/auth/login`,
-      req.body,
-      { headers: { "Content-Type": "application/json" } }
-    );
+  timeout: 30000,
 
-    const { accessToken, refreshToken } = authResponse.data.data;
+  proxyReqOptDecorator: (proxyReqOpts, srcReq) => {
+    proxyReqOpts.headers["x-request-id"] = srcReq.requestId;
+    proxyReqOpts.headers["x-forwarded-host"] = srcReq.hostname;
+    proxyReqOpts.headers["x-forwarded-proto"] = srcReq.protocol;
 
-    // Step 2: Token decode karo
-    const decoded = jwt.decode(accessToken);
-    const userId  = decoded?.userId;
-    const role    = decoded?.role;
-
-    const authHeader = { Authorization: `Bearer ${accessToken}` };
-
-    let userProfile    = null;
-    let organization   = null;
-    let subscription   = null;
-    let plan           = null;
-
-    // Step 3: User profile fetch karo (User Service)
-    try {
-      const userRes = await axios.get(
-        `${SERVICES.USER}/api/user/user/${userId}`,
-        { headers: authHeader }
-      );
-      userProfile = userRes.data;
-
-      // Step 4: Organization fetch karo (agar organizationId ho)
-      const orgId = userProfile?.organizationId;
-
-      if (orgId) {
-        try {
-          const orgRes = await axios.get(
-            `${SERVICES.USER}/api/user/organization/${orgId}`,
-            { headers: authHeader }
-          );
-          organization = orgRes.data;
-        } catch {
-          console.warn("[GATEWAY] Organization fetch failed");
-        }
-
-        // Step 5: Subscription fetch karo
-        try {
-          const subRes = await axios.get(
-            `${SERVICES.SUBSCRIPTION}/api/subscription/subscription/${orgId}`,
-            { headers: authHeader }
-          );
-          subscription = subRes.data;
-        } catch {
-          console.warn("[GATEWAY] Subscription fetch failed");
-        }
-
-        // Step 6: Plan details fetch karo (check-limit se userLimit)
-        try {
-          const planRes = await axios.get(
-            `${SERVICES.SUBSCRIPTION}/api/subscription/check-limit/${orgId}`,
-            { headers: authHeader }
-          );
-          plan = planRes.data;
-        } catch {
-          console.warn("[GATEWAY] Plan fetch failed");
-        }
-      }
-    } catch {
-      console.warn("[GATEWAY] User profile fetch failed");
+    if (srcReq.headers.authorization) {
+      proxyReqOpts.headers.authorization =
+        srcReq.headers.authorization;
     }
 
-    // Step 7: Enriched response bhejo
-    return res.status(200).json({
-      success: true,
-      message: "Login successful",
-      data: {
-        accessToken,
-        refreshToken,
-        user: {
-          userId,
-          role,
-          ...userProfile,
-        },
-        organization: organization || null,
-        subscription: subscription || null,
-        plan: plan || null,
-      },
-    });
+    return proxyReqOpts;
+  },
 
-  } catch (error) {
-    const status = error?.response?.status || 500;
-    const message = error?.response?.data?.message || "Login failed";
-    return res.status(status).json({ success: false, message });
-  }
+  proxyErrorHandler: (err, res) => {
+    console.error("Proxy Error:", err.message);
+
+    return res.status(503).json({
+      success: false,
+      message: "Microservice unavailable",
+      error: err.message,
+    });
+  },
+
+  userResDecorator: async (
+    proxyRes,
+    proxyResData,
+    userReq,
+    userRes
+  ) => {
+    userRes.setHeader("X-Powered-By", "Swaryx-Gateway");
+
+    return proxyResData;
+  },
 });
 
-///////////////////////////////////////////////////////////
-// PUBLIC ROUTES — Auth (no token needed)
-///////////////////////////////////////////////////////////
+// ======================================================
+// AUTH SERVICE
+// ======================================================
 
 app.use(
-  createProxy(SERVICES.AUTH, [
-    "/api/auth/register",
-    "/api/auth/refresh",
-    "/api/auth/verify-email",
-    "/api/auth/reset-password",
-  ])
+  "/api/auth",
+  proxy(
+    process.env.AUTH_SERVICE_URL || "http://localhost:5001",
+    proxyOptions("/api/auth")
+  )
 );
 
-// Subscription plans (public)
+// ======================================================
+// USER SERVICE
+// ======================================================
+
 app.use(
-  createProxy(SERVICES.SUBSCRIPTION, ["/api/subscription/plans"])
+  "/api/users",
+  proxy(
+    process.env.USER_SERVICE_URL || "http://localhost:5002",
+    proxyOptions("/api/users")
+  )
 );
 
-///////////////////////////////////////////////////////////
-// PROTECTED ROUTES
-///////////////////////////////////////////////////////////
+// ======================================================
+// NOTIFICATION SERVICE
+// ======================================================
 
-// Auth protected
 app.use(
-  (req, res, next) => {
-    if (req.url.startsWith("/api/auth")) return verifyToken(req, res, next);
-    next();
-  },
-  createProxy(SERVICES.AUTH, ["/api/auth/me", "/api/auth/logout"])
+  "/api/notifications",
+  proxy(
+    process.env.NOTIFICATION_SERVICE_URL || "http://localhost:5003",
+    proxyOptions("/api/notifications")
+  )
 );
 
-// User Service
+// ======================================================
+// SUBSCRIPTION SERVICE
+// ======================================================
+
 app.use(
-  (req, res, next) => {
-    if (req.url.startsWith("/api/user")) return verifyToken(req, res, next);
-    next();
-  },
-  createProxy(SERVICES.USER, (p) => p.startsWith("/api/user"))
+  "/api/subscription",
+  proxy(
+    process.env.SUBSCRIPTION_SERVICE_URL || "http://localhost:5004",
+    proxyOptions("/api/subscription")
+  )
 );
 
-// Subscription Service
+// ======================================================
+// LEAD SERVICE
+// ======================================================
+
 app.use(
-  (req, res, next) => {
-    if (req.url.startsWith("/api/subscription")) return verifyToken(req, res, next);
-    next();
-  },
-  createProxy(SERVICES.SUBSCRIPTION, (p) => p.startsWith("/api/subscription"))
+  "/api/leads",
+  proxy(
+    process.env.USER_SERVICE_URL || "http://localhost:5005",
+    proxyOptions("/api/users")
+  )
 );
 
-// Notification Service
+// ======================================================
+// CALLING SERVICE
+// ======================================================
+
 app.use(
-  (req, res, next) => {
-    if (req.url.startsWith("/api/notification")) return verifyToken(req, res, next);
-    next();
-  },
-  createProxy(SERVICES.NOTIFICATION, (p) => p.startsWith("/api/notification"))
+  "/api/calls",
+  proxy(
+    process.env.USER_SERVICE_URL || "http://localhost:5006",
+    proxyOptions("/api/users")
+  )
 );
 
-///////////////////////////////////////////////////////////
-// 404 ROUTE
-///////////////////////////////////////////////////////////
+// ======================================================
+// 404
+// ======================================================
 
 app.use((req, res) => {
   return res.status(404).json({
     success: false,
-    message: `Cannot ${req.method} ${req.originalUrl}`,
+    message: `Route ${req.originalUrl} not found`,
   });
 });
 
-///////////////////////////////////////////////////////////
+// ======================================================
+// GLOBAL ERROR HANDLER
+// ======================================================
+
+app.use((err, req, res, next) => {
+  console.error("GLOBAL ERROR:", err);
+
+  return res.status(err.status || 500).json({
+    success: false,
+    message: err.message || "Internal Server Error",
+    requestId: req.requestId,
+  });
+});
+
+// ======================================================
+// GRACEFUL SHUTDOWN
+// ======================================================
+
+process.on("SIGINT", () => {
+  console.log("SIGINT RECEIVED");
+
+  process.exit(0);
+});
+
+process.on("SIGTERM", () => {
+  console.log("SIGTERM RECEIVED");
+
+  process.exit(0);
+});
+
+// ======================================================
+// UNCAUGHT ERROR HANDLING
+// ======================================================
+
+process.on("uncaughtException", (err) => {
+  console.error("UNCAUGHT EXCEPTION:", err);
+});
+
+process.on("unhandledRejection", (err) => {
+  console.error("UNHANDLED REJECTION:", err);
+});
+
+// ======================================================
 // SERVER
-///////////////////////////////////////////////////////////
+// ======================================================
 
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`\nAPI Gateway running on port ${PORT}`);
-  console.log(`\nProxying to:`);
-  Object.entries(SERVICES).forEach(([name, url]) => {
-    console.log(`  ${name.padEnd(14)} -> ${url}`);
-  });
+  console.log(`
+==========================================
+🚀 Swaryx API Gateway Running
+🌐 PORT: ${PORT}
+==========================================
+`);
 });
