@@ -1,0 +1,112 @@
+/* NAVBAR */
+.ai-adminNav-navbar {
+  position: fixed;
+  top: 0;
+  left: 240px;
+  right: 0;
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 30px;
+  background: linear-gradient(90deg, #0b0f19, #020617);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  z-index: 50;
+}
+
+/* LEFT */
+.ai-adminNav-left {
+  flex: 1;
+}
+
+/* SEARCH BOX */
+.ai-adminNav-searchBox {
+  display: flex;
+  align-items: center;
+  background: #020617;
+  border-radius: 40px;
+  padding: 10px 15px;
+  width: 420px;
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* INPUT */
+.ai-adminNav-searchBox input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #d1d5db;
+  font-size: 14px;
+  padding: 0 10px;
+}
+
+/* ICONS */
+.ai-adminNav-searchIcon {
+  color: #6b7280;
+  font-size: 16px;
+}
+
+.ai-adminNav-clearIcon {
+  color: #6b7280;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+/* RIGHT */
+.ai-adminNav-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+/* ICON STYLE */
+.ai-adminNav-icon {
+  color: #9ca3af;
+  font-size: 18px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.ai-adminNav-icon:hover {
+  color: #fff;
+}
+
+/* PROFILE */
+.ai-adminNav-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ai-adminNav-accountIcon {
+  color: #9ca3af;
+  font-size: 24px;
+}
+
+/* TEXT */
+.ai-adminNav-userText {
+  display: flex;
+  flex-direction: column;
+  text-align: right;
+}
+
+.ai-adminNav-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #e5e7eb;
+}
+
+.ai-adminNav-role {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+/* AVATAR */
+.ai-adminNav-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+}

@@ -1,0 +1,143 @@
+.ai-adminDash-sidebar {
+  width: 240px;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  background: #0E0E12;
+  box-shadow: 20px 0px 40px 0px #00000066;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  overflow: hidden;
+}
+
+/* LOGO */
+.ai-adminDash-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 40px;
+  position: relative;
+  z-index: 1;
+}
+
+.ai-adminDash-logo-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.ai-adminDash-logo h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.ai-adminDash-logo p {
+  margin: 0;
+  font-size: 11px;
+  color: #aaa;
+  letter-spacing: 1px;
+}
+
+/* MENU */
+.ai-adminDash-menu {
+  list-style: none;
+  padding: 0;
+  flex: 1;
+  position: relative;
+  z-index: 1;
+}
+
+.ai-adminDash-menu li {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+  /* border-radius: 8px; */
+  color: #9aa4b2;
+  font-size: 14px;
+  font-weight: 500;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.ai-adminDash-menu li .ai-adminDash-menu-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.ai-adminDash-menu li svg {
+  font-size: 16px;
+}
+
+/* Hover */
+.ai-adminDash-menu li:hover {
+  background: #111827;
+  color: #fff;
+}
+
+/* Active */
+.ai-adminDash-menu .active {
+  background: linear-gradient(90deg, rgba(0, 240, 255, 0.1) 0%, rgba(0, 240, 255, 0) 100%);
+  color: #00F0FF;
+}
+
+/* Right glowing line */
+.ai-adminDash-menu .active:after {
+  content: "";
+  background: #00f0ff;
+  border-radius: 0;
+  width: 3px;
+  height: 45px;
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+/* BUTTON */
+.ai-adminDash-btn {
+  /* background: linear-gradient(135deg, #00d4ff, #7b2ff7); */
+  background: linear-gradient(135deg, #00F0FF 0%, #7000FF 100%);
+  box-shadow: 0px 0px 20px 0px #00F0FF33;
+  border: none;
+  padding: 12px;
+  border-radius: 30px;
+  color: #00363A;
+  cursor: pointer;
+  margin: 20px 0;
+  font-size: 14px;
+  font-weight: 500;
+  transition: 0.3s;
+  z-index: 1;
+}
+
+.ai-adminDash-btn:hover {
+  box-shadow: 0 10px 20px rgba(123, 47, 247, 0.3);
+}
+
+/* BOTTOM */
+.ai-adminDash-bottom {
+  font-size: 14px;
+  color: #9aa4b2;
+  z-index: 1;
+}
+
+.ai-adminDash-bottom p {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0;
+  cursor: pointer;
+}
+
+.ai-adminDash-bottom p:hover {
+  color: #fff;
+}
