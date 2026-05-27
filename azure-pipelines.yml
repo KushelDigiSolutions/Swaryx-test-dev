@@ -20,11 +20,19 @@ steps:
     cliProjectName: '$(SONAR_PROJECT_NAME)'
 
 - script: |
+    echo "Installing backend dependencies"
+    cd backend
     npm install
-  displayName: Install Dependencies
+
+    echo "Installing frontend dependencies"
+    cd ../frontend
+    npm install
+  displayName: 'Install Dependencies'
 
 - task: SonarQubeAnalyze@7
+  displayName: 'Run SonarQube Analysis'
 
 - task: SonarQubePublish@7
   inputs:
     pollingTimeoutSec: '300'
+  displayName: 'Publish Quality Gate'
